@@ -1,0 +1,143 @@
+I"4<p>listi</p>
+
+<p>[8:34 PM]</p>
+
+<h1 id="动态创建对象">动态创建对象</h1>
+
+<h2 id="概述">概述</h2>
+<p>在程序中动态创建对象是非常常见的需求，但是C中的malloc和free函数是否能满足动态创建对象吗？C + +是如何保证正确的初始化和清理并允许我们在堆上动态创建对象的呢？<em>在堆上创建对象时，确保构造函数调用是特别重要的。</em>malloc( ) 和free( ) 是库函数，因此不在编译器控制范围之内。如果我们有一个能完成动态内存分配及初始化工作的运算符和另一个能完成清理及释放内存工作的运算符，编译器就可以保证所有对象的构造函数和析构函数都会被调用。
+	因此，动态创建对象成为了C++语言的核心！！！！</p>
+
+<h2 id="对象创建时发生的事">对象创建时发生的事</h2>
+<p>当一个C + +对象被创建时，有两件事会发生。
+	1) 为对象分配内存。
+	2) 调用构造函数来初始化那个内存。
+	到目前为止，2）一定发生。 C + +强迫这样做是因为未初始化的对象是程序出错的主要原因。不用关心对象在哪里创建和如何创建的—构造函数总是被调用。然而，步骤1）可以以几种方式或在可选择的时间内发生：
+	1) 静态存储区域，存储空间在程序开始之前就可以分配。这个存储空间在程序的整个运行期间都存在。
+	2) 无论何时到达一个特殊的执行点（左花括号）时，存储单元都可以在栈上被创建。出了执行点（右花括号） ，这个存储单元自动被释放。这些栈分配运算内置在处理器的指令集中，非常有效。然而，在写程序的时候，必须知道需要多少个存储单元，以使编译器生成正确的指令。
+	3) 存储单元也可以从一块称为堆（也可称为自由存储单元）的地方分配。这称为动态内存分配，在运行时调用程序分配这些内存。这意味着可以在任何时候分配内存和决定需要多少内存。我们也负责决定何时释放内存。这块内存的生存期由我们选择决定—而不受范围限制。
+	这三个区域经常被放在一块连续的物理存储单元里：静态内存、堆栈和堆（由编译器的作者决定它们的顺序） ，但没有一定的规则。堆栈可以在某一特定的地方，堆的实现可以通过调用由运算系统分配的一块存储单元来完成。对于一个程序设计者，这三件事无须我们来完成，所以我们所要思考的是什么时候申请内存。</p>
+
+<h2 id="使用c创建一个对象">使用C创建一个对象</h2>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class obj
+{
+	int i,j,k;
+	enum {sz = 100};
+	char buf[sz];
+public:
+	void initialize() //不能用构造函数
+	{
+		cout&lt;&lt;"initialize!!!!!"&lt;&lt;endl;
+		i = j = k = 0;
+		memset(buf,0,sz);
+	}
+	void destroy() //不能用析构函数
+	{
+		cout&lt;&lt;"destroy!!!!!"&lt;&lt;endl;
+	}
+};
+
+int main(void)
+{
+	obj *Obj = (obj*)malloc(sizeof(obj));
+	if(NULL == Obj )
+	{
+		return -1;
+	}
+	Obj-&gt;initialize();
+	//do something
+	Obj-&gt;destroy();
+	free(Obj);
+	return 0;
+}
+</code></pre></div></div>
+
+<p><strong>注意构造函数没有被使用，因为构造函数不能被显式地调用—而是当对象创建时由编译器调用。</strong></p>
+
+<h2 id="c的new-delete运算符">C++的New Delete运算符</h2>
+<p>C + +中的解决方案是把创建一个对象所需的所有动作都结合在一个称为 n e w的运算符里。当用 n e w（ n e w的表达式）创建一个对象时，它就在堆里为对象分配内存并为这块内存调用构造函数。
+因此，如果我们写出下面的表达式</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>foo *fp = new foo(1,2) ;
+</code></pre></div></div>
+<p>在运行时等价于调用 m a l l o c ( s i z e o f ( f o o ) )，并使用（ 1 ， 2）作为参数表来为 f o o调用构造函数，返回值作为 t h i s指针的结果地址。在该指针被赋给 f p之前，它是不定的、未初始化的对象—在这之前我们甚至不能触及它。它自动地被赋予正确的 f o o类型，所以不必进行映射。
+	在堆里创建对象的过程变得简单了— 只是一个简单的表达式 ,它带有内置的长度计算、类型转换和安全检查。
+	n e w表达式的反面是 d e l e t e表达式。 d e l e t e表达式首先调用析构函数，然后释放内存（经常是调用 free( ) ）。正如 n e w表达式返回一个指向对象的指针一样， d e l e t e表达式需要一个对象的地址。</p>
+
+<p>在C + +里，同样容易在栈或堆上创建一个对象数组。当然，应当为数组里的每一个对象调用构造函数。有一个约束：除了在栈上整体初始化（见第 4章）外必须有一个缺省的构造函数，因为不带参数的构造函数必须被每一个对象调用。</p>
+
+<h2 id="当内存用完后会发生">当内存用完后，会发生？</h2>
+<p>当运算符new找不到足够大的连续内存块来安排对象时将会发生什么？一个称为 newhandle的函数被调用。或者，检查指向函数的指针，如果指针非 0，那么它指向的函数被调用。对于newhandle的缺省动作是抛出一个异常 (throw an exception)，然而，如果我们在程序里用堆分配，至少要用“内存已用完”的信息代替 newhandle，并异常中断程序。用这个办法，在调试程序时会得到程序出错的线索。对于最终的程序，我们总想使之具有很强的容错性。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>void out_of_memory()
+{
+	cerr&lt;&lt;"Mem exhausted!"&lt;&lt;endl;
+	exit(1);
+}
+int main(void)
+{
+	set_new_handler(out_of_memory);
+	while(1)
+	{
+		new int[10000]; //耗尽内存！
+	}
+}
+</code></pre></div></div>
+
+<p><strong>可以写更圆满的 n e w - h a n d l e r，甚至它可以做垃圾回收）。</strong></p>
+
+<h2 id="可以重载new和delete">可以重载new和delete</h2>
+<p>当创建一个new表达式时有两件事发生。首先，使用运算符new分配内存，然后调用构造函数。在 delete表达式里，调用析构函数，然后使用运算符delete释放内存。
+<strong>我们永远无法控制构造函数和析构函数的调用</strong></p>
+
+<p>重载其的原因是考虑效率：我们也许要创建和销毁特定的类的非常多的对象以至于这个运算变成了速度的瓶颈。 C + +允许重载new和delete来实现我们自己的存储分配方案。</p>
+
+<p>重载new和delete与重载任何其他运算符一样。但可以选择重载全局内存分配函数，或为特定的类使用特定的分配函数。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>void * operator new(size_t sz)
+{
+	printf("oper new: %d bytes\n",sz);
+	void *m = malloc(sz);
+	if(!m)
+	{
+		puts("out of mem!!!!!");
+	}
+	return m;
+}
+void operator delete(void *m)
+{
+	puts("oprtator del!!!!!");
+	free(m);
+}
+
+class s
+{
+	int i[100];
+public:
+	s()
+	{
+		puts("s::s()");
+	}
+	~s()
+	{
+		puts("s::~s()");
+	}
+}
+
+int main(void)
+{
+	int *p = new int(47);
+	delete p;
+	s *S = new s;
+	delte S;
+	return 0;
+}
+</code></pre></div></div>
+
+<p><strong>可以看出调用了自己编写的版本！！！！！</strong></p>
+
+<p>如果为一个类重载了运算符 new和delete，那么无论何时创建这个类的一个对象都将调用这些运算符。但如果为这些对象创建一个数组时，将调用全局运算符new()立即为这个数组分配足够的内存。全局运算符delete()被调用来释放这块内存。可以通过为那个类重载数组版本的运算符new[]和delete[]来控制对象数组的内存分配。</p>
+
+<h2 id="总结">总结</h2>
+<p>new和delete运算符很重要，特别是需要对来自程序外部信息反应时，能够创建和销毁对象。</p>
+:ET

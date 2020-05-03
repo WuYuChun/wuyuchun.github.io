@@ -1,0 +1,201 @@
+I"4=<p>listi</p>
+
+<p>[12:18 ]</p>
+
+<p>[C++ 11增加了三个与时间相关的类型：时间段、时钟、时间点。]</p>
+<h1 id="前言">前言</h1>
+
+<p>现有的系统API中，时间太过于碎片化了。有time_t(秒)、struct timeval(微秒)、struct timespec(纳秒)这几个时间单位，他们的接口非常不统一，点击这里可以体会一下。主要原因：是由于新业务的需求，
+要求提供不同精度的时间。于是每次出现新需求就定义一个新类型。为此，C++11提出一个”一统江湖”的做法，避免这类现象的发生。 时间精度其实也就是时间分辨率。抛开时间量纲单论分辨率
+，其实就是一个比率。如：10001、101、11 、110、11000。这些比率加上距离量纲就变成距离分辨率，加上时间量纲就变成时间分辨率了。为此，C++11定义了一个新的模板类ratio，用于表示比率，定义如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;ration&gt;
+template&lt;std::intmax_t Num, std::intmax_t Denom = 1&gt; //前者是分子，后者是分母 后者表示 1秒
+class ratio;
+
+</code></pre></div></div>
+<p>为了方便，C++标准委员会还预定义了下面这些分辨率，供用户使用。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;ratio&gt;
+typedef ratio&lt;1,       1000000000000000000&gt; atto;
+typedef ratio&lt;1,          1000000000000000&gt; femto;
+typedef ratio&lt;1,             1000000000000&gt; pico;
+typedef ratio&lt;1,                1000000000&gt; nano;
+typedef ratio&lt;1,                   1000000&gt; micro;
+typedef ratio&lt;1,                      1000&gt; milli;
+typedef ratio&lt;1,                       100&gt; centi;
+typedef ratio&lt;1,                        10&gt; deci;
+typedef ratio&lt;                       10, 1&gt; deca;
+typedef ratio&lt;                      100, 1&gt; hecto;
+typedef ratio&lt;                     1000, 1&gt; kilo;
+typedef ratio&lt;                  1000000, 1&gt; mega;
+typedef ratio&lt;               1000000000, 1&gt; giga;
+typedef ratio&lt;            1000000000000, 1&gt; tera;
+typedef ratio&lt;         1000000000000000, 1&gt; peta;
+typedef ratio&lt;      1000000000000000000, 1&gt; exa;
+</code></pre></div></div>
+
+<h1 id="时间断">时间断</h1>
+
+<p>30分钟，0.5秒都表示一段时间。由此可以得到：一段时间是由”数值+时间单位”组成的。反映在编程上就是要存储两个变量。显然，数值有整数和小数两种，
+究竟是使用整数(int)还是小数(double)应该由用户指定。无疑，用模板表示之是非常合适的。结合前面提到的时间精度，不难得出一段时间应该定义为如下形式：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;chrono&gt;
+template&lt;class Rep, class Period = std::ratio&lt;1&gt; &gt; 
+class duration;
+</code></pre></div></div>
+<p>于是，30秒就有下面几种表示方式：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::duration&lt;int, std::ratio&lt;1,1&gt;&gt; a(30);//30秒
+std::chrono::duration&lt;int&gt; b(30);//30秒
+std::chrono::duration&lt;int, std::ratio&lt;1, 1000&gt;&gt; c(30000);//30 000毫秒
+std::chrono::duration&lt;double, std::ratio&lt;60,1&gt;&gt; d(0.5);//半分钟
+</code></pre></div></div>
+<p>同样，C++标准委员会预定义了下面这些类型，供我们直接使用。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>std::chrono::nanoseconds    duration&lt;/*signed integer type of at least 64 bits*/, std::nano&gt;
+std::chrono::microseconds   duration&lt;/*signed integer type of at least 55 bits*/, std::micro&gt;
+std::chrono::milliseconds   duration&lt;/*signed integer type of at least 45 bits*/, std::milli&gt;
+std::chrono::seconds    duration&lt;/*signed integer type of at least 35 bits*/&gt;
+std::chrono::minutes    duration&lt;/*signed integer type of at least 29 bits*/, std::ratio&lt;60&gt;&gt;
+std::chrono::hours  duration&lt;/*signed integer type of at least 23 bits*/, std::ratio&lt;3600&gt;&gt;
+</code></pre></div></div>
+<p>又是讨厌的implementation-defined，gcc4.9.0的一个实现为：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>typedef duration&lt;int64_t, nano&gt;         nanoseconds;
+typedef duration&lt;int64_t, micro&gt;        microseconds;
+typedef duration&lt;int64_t, milli&gt;        milliseconds;
+typedef duration&lt;int64_t&gt;           seconds;
+typedef duration&lt;int64_t, ratio&lt; 60&gt;&gt;   minutes;
+typedef duration&lt;int64_t, ratio&lt;3600&gt;&gt;  hours;
+</code></pre></div></div>
+<p>当定义了一个时间段后，如何从中得知该时间段类型的rep和period模板参数的类型呢？其实，当我们用具体的类型实例化duration模板类后，
+实例化的类就会有rep和period这两个成员类型。于是，可以借助C++11中的关键字decltype以及直接从定义中获取。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+typedef std::chrono::duration&lt;int, std::ratio&lt;60&gt;&gt; Minus;
+Minus::rep a = 30; //a是int类型
+Minus::period per;//per的类型是 std::ration&lt;60, 1&gt;。即per.num 为60， per.den 为1
+
+Minus twenty_seconds(20);
+decltype(twenty_seconds.count()) b = 30;//后面会介绍count()的返回值类型, b的类型为int
+decltype(twenty_seconds)::rep e = 40;//e的类型为int
+</code></pre></div></div>
+<p>duration模板类提供了一个成员函数count()用户获取该时间段的值，这个值也称为滴答数。它的返回值类型就是实例化后成员类型rep。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::seconds twenty_sec(20);
+int c = twenty_sec.count();//c等于20
+std::chrono::duration&lt;double&gt; half_sec(0.5);
+double d = half_sec.count();//d等于0.5
+</code></pre></div></div>
+
+<h1 id="时钟">时钟</h1>
+
+<p>时钟有电子表、怀表、秒表、原子钟等。这些时钟的时间精度有所不同。此外，对于电子表的时间是无法取小数的，而怀表则可以人为地取小数。
+这说明不同的时钟也会有前面时间段类型duration的rep和period这两个属性。并且也是以成员类型的形式出现。但时钟类本身不是模板类。 
+C++11为我们提供了三种时钟类型：system_clock、steady_clock、high_resolution_clock。 这三个时间类都提供了rep、period、duration成员类型。
+因为各个系统能提供的时间精度可能不同，所以period的真正类型是implementation-defined的。这三个时钟类都提供了一个静态成员函数now()用于获取当前时间，该函数的返回值是一个time_point类型，后面会介绍。 
+<strong>注意：，虽然这三个时钟都很多相同的成员类型和成员函数，但它们是没有亲缘关系的。这三个时钟类型都是类，并非模板类。</strong>
+这三个时钟有什么区别呢？system_clock就类似Windows系统右下角那个时钟，是系统时间。明显那个时钟是可以乱设置的。明明是早上10点，
+却可以设置成下午3点。steady_clock则针对system_clock可以随意设置这个缺陷而提出来的，他表示时钟是不能设置的。想了解更多，可以点击这里。high_resolution_clock则是一个高分辨率时钟。 
+system_clock除了now()函数外，还提供了to_time_t()静态成员函数。用于将系统时间转换成熟悉的std::time_t类型，得到了std::time_t类型的值，就可以很方便地打印当前时间了。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto tp = std::chrono::system_clock::now();
+std::time_t cur_time = std::chrono::system_clock::to_time_t(tp);
+std::string str_time = std::ctime(&amp;cur_time);
+std::cout&lt;&lt;str_time&lt;&lt;std::endl;
+</code></pre></div></div>
+<p>注意：不要将steady_clock、high_resolution_clock时钟的now()返回值作为to_time_t的参数，这会导致编译通不过。因为类型不匹配，后面会详解。 
+其实，如果读者有把刚才那个链接点开，并去了解的steady_clock的话，不用了解now()返回值类型就能知道这样做肯定是不行的了。
+steady_clock的实现是使用monotonic时间，而monotonic时间一般是从boot启动后开始计数的。明显这不能获取日历时间(年月日时分秒)。
+那么steady_clock有什么用途呢？时间比较！并且是不受用户调整系统时钟影响的时间比较。简单的例子如下：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto begin = std::chrono::steady_clock::now();
+for(int i = 0; i &lt; 10000000; ++i)
+{
+    //复杂的数学运算
+}
+auto end = std::chrono::steady_clock::now();
+auto diff = (end - begin).count();//end-begin得到一个duration类型
+std::cout&lt;&lt;diff&lt;&lt;std::endl;
+</code></pre></div></div>
+<p>即使在做数学运算的时候，有人修改了系统时间，也能准确计算出for循环消耗的时间。</p>
+
+<h1 id="时间点">时间点</h1>
+
+<p>前面已经指出：时钟类的now()函数的返回值是一个time_point类(型)。不言而喻，时间点(time_point)必然是时钟相关的。
+从怀表读取到的时间(点)只有小时、分钟、秒，手机则能提供日期+时分秒。此外，不同时钟提供的时间精度也有所不同。所以，
+时间点(time_point)类至少得有时钟类型、时间精度这两个属性。同前面介绍的时间段模板类一样，这两个属性也是以模板参数的形式出现。time_point的定义如下：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;chrono&gt;
+template&lt; class Clock, class Duration = typename Clock::duration &gt; 
+class time_point;
+</code></pre></div></div>
+<p>时间精度是duration类，默认的时钟模板参数提供的duration。时钟模板参数除了前面介绍的那三个时钟(这是C++默认提供的)外，还可以是码农自己定义的时钟类。 
+同前面的时间段类和时钟类一样，时间点类也提供了rep、period、duration、clock这几个成员类型。
+前面已经指出，各个时钟能提供的时间精度是implementation-defined的。所以应该如下面代码那样获取时钟的now()函数返回值。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>auto tp = std::chrono::system_clock::now();
+std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+</code></pre></div></div>
+<p>下面代码是不正确的，不具有可移植性。例子来自stackoverflow。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>std::chrono::time_point&lt;std::chrono::system_clock,std::chrono::nanoseconds&gt; time_point;
+time_point = std::chrono::system_clock::now();
+</code></pre></div></div>
+<p>除了从时钟类的now函数中获取一个time_point，还可以直接构造一个time_point对象。time_point模板类的构造函数有无参的、
+用duration作为参数这两个构造函数。对此，我感到很奇怪：直接构造出来的time_point有什么含义呢？
+time_point有一个time_since_epoch()成员函数，返回从epoch时间到此刻的时间段。epoch时间是时钟的开启时间。
+对于system_clock和high_resolution_clock来说，epoch是1970-01-01T00:00:00。熟悉C语言time()函数的读者对此应该不陌生。
+steady_clock时钟则是boot启动时间，所以不应该对steady_clock::now()返回的time_point调用time_since_epoch()。下面是霸王强上弓使用，打印出来的时间是1970年的。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto tp = std::chrono::steady_clock::now();
+std::time_t cur_time = std::chrono::duration_cast&lt;std::chrono::seconds&gt;(tp.time_since_epoch()).count();
+std::string str_time = std::ctime(&amp;cur_time);
+cout&lt;&lt;str_time&lt;&lt;endl;
+</code></pre></div></div>
+<p>如果time_point不是从时钟类的now()返回值得来的，而是直接构造出来的话，那么它调用time_since_epoch()的返回值就等同于构造函数中的duration参数。</p>
+
+<h1 id="运算">运算</h1>
+
+<p>一段时间的加减乘除无疑是合理的，当然关系比较也是合理的。C++标准委员会还把取模运算也变成合法的了，不仅仅模一个数值合法，模duration类也是合法的。于是有下面这些运算： 
+duration运算
+—
+       具体的使用例子就不写了，读者可以参考en.cppreference.com 
+       上面的运算都是二元运算，如果参与运算的两个duration具有相同的模板参数，那直接运行即可。如果不同，那么将发生隐式转换：int-&gt;double; 低分辨率-&gt;高分辨率。比如：
+—</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::duration&lt;int&gt; two(2);
+std::chrono::duration&lt;double, std::ratio&lt;60&gt;&gt; thirty(0.5);
+
+auto ad = two + thirty;
+cout&lt;&lt;sizeof(decltype(ad)::rep)&lt;&lt;endl;//8
+cout&lt;&lt;ad.count()&lt;&lt;"\t"&lt;&lt;decltype(ad)::period::num&lt;&lt;"/"&lt;&lt;decltype(ad)::period::den&lt;&lt;endl;//32  1/1
+</code></pre></div></div>
+<p>如果参与运算的两个duration具有不同的模板参数，那么能不能进行+=和-=这里运算呢？
+a+=b等同于a=a+b。a+b肯定是可以的，现在问题转换为a=c是否可行？从低精度(包含Rep和Period)到高精度的隐式转换是可行的，反之则是不可以的。因为这将导致截断，丢失部分信息。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::minutes a(30);
+std::chrono::seconds b = a;//OK
+std::chrono::minutes c = b;//compile error
+
+std::chrono::duration&lt;double, std::ratio&lt;60&gt;&gt; d(3);
+std::chrono::seconds e = d;//compile error
+std::chrono::duration&lt;double&gt; f = d;//OK
+</code></pre></div></div>
+<p>如果确实需要进行转换的话，那么需要使用duration_cast进行显式转换。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::seconds a(30);
+std::chrono::minutes b = std::chrono::duration_cast&lt;std::chrono::minutes&gt;(a);
+cout&lt;&lt;b.count()&lt;&lt;endl;//结果是0
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//下面是system_clock时钟类to_time_t函数的gcc实现
+static std::time_t to_time_t(const time_point&amp; __t) noexcept
+{
+    return std::time_t(duration_cast&lt;chrono::seconds&gt; (__t.time_since_epoch()).count());
+}
+</code></pre></div></div>
+<hr />
+
+<p>time_point类也有一些运算，如下图： 
+time_point运算</p>
+
+<p>gcc4.9.0实现time_point模板类时，time_point内部有一个duration类型的成员变量。
+所以对于tp+=d和dp-=d的实现，都是直接对内部的成员变量直接调用+=，-=。所以调用者必须保证精度的正确性，否则编译出错。</p>
+
+<hr />
+:ET

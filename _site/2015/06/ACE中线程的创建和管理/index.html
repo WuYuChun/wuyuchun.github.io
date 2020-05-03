@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <title>ACE中线程的创建和管理</title>
+  <meta name="description" content="listi">
+  <meta name="author" content="leopardpan">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="ACE中线程的创建和管理">
+  <meta name="twitter:description" content="listi">
+  
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="ACE中线程的创建和管理">
+  <meta property="og:description" content="listi">
+  
+  <link rel="icon" type="image/png" href="/images/favicon.png" />
+  <link href="/images/favicon.png" rel="shortcut icon" type="image/png">
+  
+  <link rel="stylesheet" href="/css/main.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="canonical" href="http://localhost:4000/2015/06/ACE%E4%B8%AD%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E7%AE%A1%E7%90%86/">
+  <link rel="alternate" type="application/rss+xml" title="wuyuchun" href="http://localhost:4000/feed.xml">
+  
+  <meta name="google-site-verification" content="1-1ZlHoRvM0T2FqPbW2S-qLgYXN6rsn52kErlMPd_gw" />
+
+<!-- 站点统计 -->
+  <script 
+  async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js">
+  </script>  
+
+<!-- 百度统计 -->
+  
+  <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "//hm.baidu.com/hm.js?xxxx";
+        var s = document.getElementsByTagName("script")[0]; 
+        s.parentNode.insertBefore(hm, s);
+      })();
+  </script>
+  
+
+<!-- google 统计 -->
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      ga('create', 'xxxx', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-9005224472374751",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+
+  <body>
+
+    <span class="mobile btn-mobile-menu">        
+      <div class="nav_container">
+         <nav class="nav-menu-item" style = "float:right">
+            <i class="nav-menu-item">
+              <a href="/#blog" title="" class="blog-button">  博客主页
+              </a>
+            </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/archive" title="archive" class="btn-mobile-menu__icon">
+                      所有文章
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/tags" title="tags" class="btn-mobile-menu__icon">
+                      标签
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/about" title="about" class="btn-mobile-menu__icon">
+                      关于我
+                  </a>
+                </i>
+            
+          </nav>
+      </div>
+    </span>
+    
+    <header class="panel-cover panel-cover--collapsed" style="background-image: url('/images/background-cover.jpg')">
+  <div class="panel-main">
+
+    <div class="panel-main__inner panel-inverted">
+    <div class="panel-main__content">
+        <!-- 头像效果-start -->
+        <div class="ih-item circle effect right_to_left">            
+            <a href="/#blog" title="前往 wuyuchun 的主页" class="blog-button">
+                <div class="img"><img src="/images/avatar.jpg" alt="img"></div>
+                <div class="info">
+                    <div class="info-back">
+                        <h2> 
+                            
+                                messi
+                            
+                        </h2>
+                        <p>
+                           
+                                机器学习/ 优化师
+                            
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- 头像效果-end -->
+        <h1 class="panel-cover__title panel-title"><a href="/#blog" title="link to homepage for wuyuchun" class="blog-button">wuyuchun</a></h1>
+        
+        <span class="panel-cover__subtitle panel-subtitle">个人站</span>
+        
+        <hr class="panel-cover__divider" />
+        <p class="panel-cover__description">欢迎来到我的个人站~</p>
+        <hr class="panel-cover__divider panel-cover__divider--secondary" />
+        
+        
+        
+
+        <div class="navigation-wrapper">
+          <div>
+            <nav class="cover-navigation cover-navigation--primary">
+              <ul class="navigation">
+                <li class="navigation__item"><a href="/#blog" title="" class="blog-button">博客主页</a></li>
+                
+                  <li class="navigation__item"><a href="/archive" title="archive">所有文章</a></li>
+                
+                  <li class="navigation__item"><a href="/tags" title="tags">标签</a></li>
+                
+                  <li class="navigation__item"><a href="/about" title="about">关于我</a></li>
+                
+              </ul>
+            </nav>
+          </div>          
+        </div>
+
+
+        </div>
+      </div>
+    </div>
+    
+    
+    <div class="panel-cover--overlay cover-clear"></div>
+    
+  </div>
+</header>
+
+
+    <div class="content-wrapper">
+        <div class="content-wrapper__inner">
+            <article class="post-container post-container--single" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title">ACE中线程的创建和管理</h1>
+    <div class="post-meta">
+      <img src="/images/calendar.png" width="20px"/> 
+      <time datetime="2015-06-21 13:42:00 +0800" itemprop="datePublished" class="post-meta__date date">2015-06-21</time>  
+         
+      <span id="busuanzi_container_page_pv"> | 阅读：<span id="busuanzi_value_page_pv"></span>次</span>
+    </p>
+    </div>
+  </header>
+
+  <section class="post">
+    <p>listi</p>
+
+<p>[1:42 PM]</p>
+
+<h1 id="目的">目的</h1>
+
+<p>有过在不同的操作系统下用c++进行过多线程编程的朋友对那些线程处理的API可能深有体会，这些API提供了相同或是相似的功能，但是它们的API的差别却极为悬殊，十分令人头痛。ACE_Thread提供了对不同OS的线程调用的简单包装，通过一个通用的接口进行处理线程创建、挂起、取消和删除等问题。</p>
+
+<h1 id="用于创建和管理线程的ace类">用于创建和管理线程的ACE类</h1>
+
+<p>1、ACE_Thread_Manager：这是负责创建、管理和同步线程的主要的类。每种操作系统在处理线程方面有细微差异，这个类对应用程序开发人员隐藏这些差异。</p>
+
+<p>2、ACE_Sched_Params:使用这个类管理各个线程的调度优先级，调度优先级是在 ACE 源代码发行版的 ace/Sched_Params.h 头文件中定义的。可以采用不同的调度策略，可以是 “先到先服务” 的循环方式。</p>
+
+<p>3、ACE_TSS:在多线程应用程序中使用全局变量会导致同步问题。</p>
+
+<p>4、ACE_TSS:类提供与线程相关的存储模式，可以对那些对于程序是全局的，但是对于每个线程私有的数据提供抽象。</p>
+
+<h2 id="ace_thread_manager类">ACE_Thread_Manager类</h2>
+<p>本文主要介绍ACE_Thread_Manager类，因为在平时用它也是比较多的。其提供如下的功能：</p>
+
+<p>a）它可以生成一个或更多线程，每个线程运行自己指定的函数。</p>
+
+<p>b）它可以作为一个集合（称为 线程组）管理相关的线程。</p>
+
+<p>c）它管理各个线程的调度优先级。</p>
+
+<p>e）它允许在线程之间进行同步。</p>
+
+<p>f）它可以修改线程属性，比如堆栈大小。</p>
+
+<hr />
+
+<p><strong>以下用类似于这种方式来说明类的方法：方法名（说明）</strong></p>
+
+<ol>
+  <li>instance（ACE_Thread_Manager类是一个单实例类，使用这个方法访问线程管理器的惟一实例。）</li>
+  <li>spawn（这个方法创建一个新线程，它的一个输入参数是 C/C++函数指针，这个函数执行应用程序的特定工作。）</li>
+  <li>exit（这个方法终止一个线程，释放这个线程的所有资源。）</li>
+  <li>spawn_n（这个方法创建属于同一个线程组的多个线程。）</li>
+  <li>close（这个方法关闭已经创建的所有线程并释放它们的资源。）</li>
+  <li>suspend（线程管理器暂停指定的线程。）</li>
+  <li>resume（线程管理器恢复执行前面暂停的线程。）</li>
+</ol>
+
+<hr />
+
+<p><strong>注意：可以作为单实例类使用 ACE_Thread_Manager类，也可以创建这个类的多个实例。对于单一实例，通过调用 instance方法访问实例。如果需要管理多个线程组，可以创建不同的线程管理器类，每个类控制它自己的线程集。</strong></p>
+
+<p>不说了那么多，直接上码：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include "ace/config.h"
+#include "ace/Thread_Manager.h"
+#include "ace/ACE.h"
+#include &lt;iostream&gt;
+
+using namespace std;
+
+ACE_THR_FUNC_RETURN svc( void * argv)
+{
+	int nCount = 1000;
+	for ( int i = 0; i &lt; nCount ; ++i )
+	{
+		cout&lt;&lt;"now:="&lt;&lt;i&lt;&lt;endl;
+	}
+	return NULL;
+}
+    
+int main(int, char *[])
+{
+	ACE_Thread_Manager::instance()-&gt;spawn(svc , NULL);
+	ACE_Thread_Manager::instance()-&gt;wait();
+	return 0;
+};
+</code></pre></div></div>
+
+<p>结果为打印出来了1~1000的次数。</p>
+
+<p>初步使用，主要说说这个spawn（）函数，因为其是用于创建线程。其的原型如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int spawn ( ACE_THR_FUNC func,
+            void *arg = 0,
+ 			long flags = THR_NEW_LWP | THR_JOINABLE | THR_INHERIT_SCHED,
+ 			ACE_thread_t *t_id = 0,
+ 			ACE_hthread_t *t_handle = 0,
+ 			long priority = ACE_DEFAULT_THREAD_PRIORITY,
+ 			int grp_id = -1,
+ 			void *stack = 0,
+ 			size_t stack_size = ACE_DEFAULT_THREAD_STACKSIZE,
+ 			const char** thr_name = 0);
+</code></pre></div></div>
+
+<p>各个参数的作用：</p>
+
+<ul>
+  <li>ACE_THR_FUNC func：这是在生成线程时调用的函数。</li>
+  <li>void* arg：这是在生成线程时调用的函数的参数。（void*意味着用户可以传递应用程序特有的任何数据类型，甚至可以使用某种结构把多个参数组合成单一数据。 ）</li>
+  <li>long flags：使用 flags变量设置生成的线程的几个属性。各个属性都由单一位表示，按照 “或” 关系组合在一起。</li>
+  <li>ACE_thread_t *t_id：使用这个函数访问创建的线程的 ID。每个线程具有惟一的 ID。</li>
+  <li>long priority：这是生成的线程的优先级。</li>
+  <li>int grp_id：如果提供这个参数，那么它表示生成的线程是否属于现有的某一线程组。如果传递 -1，那么创建新的线程组并在这个组中添加生成的线程。</li>
+  <li>void* stack：这是预先分配的堆栈区域的指针。如果提供 0，就请求操作系统提供生成的线程的堆栈区域。</li>
+  <li>size_t stack_size：这个参数指定线程堆栈的大小（字节数）。如果对于前一个参数（堆栈指针）指定了 0，那么请求操作系统提供大小为 stack_size的堆栈区域。</li>
+  <li>
+    <p>const char** thr_name：这个参数只与支持线程命名的平台（比如 VxWorks）相关。对于 UNIX 平台，在大多数情况下忽略它。</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  void print (void* args)
+
+  {
+
+      int id = ACE_Thread_Manager::instance()-&gt;thr_self();
+      cout &lt;&lt; "Thread Id: " &lt;&lt; id &lt;&lt; endl;
+  }
+
+  int main(int, char *[])
+
+  {
+</code></pre></div>    </div>
+
+  	ACE_Thread_Manager::instance()-&gt;spawn_n(
+  		4, (ACE_THR_FUNC) print, 0, THR_JOINABLE | THR_NEW_LWP);
+
+  	ACE_Thread_Manager::instance()-&gt;wait();
+  	return 0;
+  	}
+  </li>
+</ul>
+
+<h3 id="另一种创建线程的机制">另一种创建线程的机制</h3>
+
+<p>本节讨论 ACE 提供的另一种线程创建/管理机制。这种方法不需要对线程管理器进行显式的细粒度的控制。在默认情况下，每个进程在创建时有一个线程，这个线程在 main函数开始时启动，在 main结束时终止。其他线程都需要显式地创建。创建线程的另一种方式是创建预定义的 ACE_Task_Base
+类的子类，然后覆盖 svc()方法。新线程在 svc()方法中启动，在 svc()
+方法返回时终止。</p>
+
+<p>先上码：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include "ace/Task.h"
+#include &lt;iostream&gt;
+using namespace std;
+class CThread:public ACE_Task_Base
+{
+public:
+	virtual int svc( )
+	{
+		cout&lt;&lt;"In Child's thread\n";
+		return 0;
+	}
+};
+int main(int, char *[])
+{
+
+	CThread cthTest;
+	cthTest.activate(THR_NEW_LWP|THR_JOINABLE);
+	cthTest.wait();
+	return 0;
+}
+</code></pre></div></div>
+
+<p>说明：
+在 svc()方法中编写与应用程序相关的线程行为。通过调用 activate()
+方法（在 ACE_Task_Base类中声明和定义）执行线程。在激活线程之后，
+main()函数等待子线程完成执行。这就是 wait()方法的作用：在 cthTest执行完之前，主线程被阻塞。这一等待过程是必需的；否则，主线程会调度子线程并执行退出。在看到主线程退出时，运行时会销毁所有子线程；因此，子线程可能根本没有被调度或执行。</p>
+
+<p>ACE_Task_Base::activate 方法的原型</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>virtual int activate (
+long flags = THR_NEW_LWP | THR_JOINABLE |THR_INHERIT_SCHED,
+int n_threads = 1,
+int force_active = 0,
+long priority = ACE_DEFAULT_THREAD_PRIORITY,
+int grp_id = -1,
+ACE_Task_Base *task = 0,
+ACE_hthread_t thread_handles[ ] = 0,
+void *stack[ ] = 0,
+size_t stack_size[ ] = 0,
+ACE_thread_t thread_ids[ ] = 0,
+const char* thr_name[ ] = 0);
+</code></pre></div></div>
+
+<p>activate()方法创建一个或多个线程，每个线程调用相同的 svc()方法，所有线程采用相同的优先级并具有相同的组 ID。</p>
+
+<h1 id="结束语">结束语</h1>
+<p>注意这里简要介绍了如何使用ACE来创建和管理线程。</p>
+
+
+
+  </section>
+</article>
+
+<section>
+
+            <div class="content-play">
+              <p><a href="javascript:void(0)" onclick="dashangToggle()" class="dashang" title="打赏，支持一下">打赏一个呗</a></p>
+              <div class="hide_box-play"></div>
+              <div class="shang_box-play">
+                <a class="shang_close-play" href="javascript:void(0)" onclick="dashangToggle()" title="关闭"><img src="/images/payimg/close.jpg" alt="取消" /></a>
+                <div class="shang_tit-play">
+                  <p>感谢您的支持，我会继续努力的!</p>
+                </div>
+                <div class="shang_payimg">
+                    <img src="/images/payimg/alipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+              <div class="shang_payimg">    
+                    <img src="/images/payimg/weipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+                <div class="pay_explain">扫码打赏，你说多少就多少</div>
+                <div class="shang_payselect">
+                  <div class="pay_item checked" data-id="alipay">
+                    <span class="pay_logo"><img src="/images/payimg/alipay.jpg" alt="支付宝" /></span>
+                  </div>
+                  <div class="pay_item" data-id="weipay">
+                    <span class="pay_logo"><img src="/images/payimg/wechat.jpg" alt="微信" /></span>
+                  </div>
+                </div>
+                <div class="shang_info-play">
+                  <p>打开<span id="shang_pay_txt">支付宝</span>扫一扫，即可进行扫码打赏哦</p>
+                </div>
+              </div>
+            </div>
+            <script type="text/javascript">
+            function dashangToggle(){
+              $(".hide_box-play").fadeToggle();
+              $(".shang_box-play").fadeToggle();
+            }
+            </script>
+
+            <div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';"></div>
+
+            <style type="text/css">
+              .content-play{width:80%;margin-top: 20px;margin-bottom: 10px;height:40px;}
+              .hide_box-play{z-index:999;filter:alpha(opacity=50);background:#666;opacity: 0.5;-moz-opacity: 0.5;left:0;top:0;height:99%;width:100%;position:fixed;display:none;}
+              .shang_box-play{width:540px;height:540px;padding:10px;background-color:#fff;border-radius:10px;position:fixed;z-index:1000;left:50%;top:50%;margin-left:-280px;margin-top:-280px;border:1px dotted #dedede;display:none;}
+              .shang_box-play img{border:none;border-width:0;}
+              .dashang{display:block;width:100px;margin:5px auto;height:25px;line-height:25px;padding:10px;background-color:#E74851;color:#fff;text-align:center;text-decoration:none;border-radius:10px;font-weight:bold;font-size:16px;transition: all 0.3s;}
+              .dashang:hover{opacity:0.8;padding:15px;font-size:18px;}
+              .shang_close-play{float:right;display:inline-block;
+                margin-right: 10px;margin-top: 20px;
+              }
+              .shang_logo{display:block;text-align:center;margin:20px auto;}
+              .shang_tit-play{width: 100%;height: 75px;text-align: center;line-height: 66px;color: #a3a3a3;font-size: 16px;background: url('/images/payimg/cy-reward-title-bg.jpg');font-family: 'Microsoft YaHei';margin-top: 7px;margin-right:2px;}
+              .shang_tit-play p{color:#a3a3a3;text-align:center;font-size:16px;}
+              .shang_payimg{width:140px;padding:10px;padding-left: 80px; /*border:6px solid #EA5F00;**/margin:0 auto;border-radius:3px;height:140px;display:inline-block;}
+              .shang_payimg img{display:inline-block;margin-right:10px;float:left;text-align:center;width:140px;height:140px; }
+              .pay_explain{text-align:center;margin:10px auto;font-size:12px;color:#545454;}
+              .shang_payselect{text-align:center;margin:0 auto;margin-top:40px;cursor:pointer;height:60px;width:500px;margin-left:110px;}
+              .shang_payselect .pay_item{display:inline-block;margin-right:140px;float:left;}
+              .shang_info-play{clear:both;}
+              .shang_info-play p,.shang_info-play a{color:#C3C3C3;text-align:center;font-size:12px;text-decoration:none;line-height:2em;}
+            </style>
+
+       <ul class="pager">
+        
+        <li class="previous">
+            <a href="/2015/06/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%BC%8F/" data-toggle="tooltip" data-placement="top" title="异步编程模式">上一篇：  <span>异步编程模式</span>
+            </a>
+        </li>
+        
+        
+        <li class="next">
+            <a href="/2015/06/UNIX%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B%E5%8D%B7%E4%B8%80-%E5%A5%97%E6%8E%A5%E5%AD%97%E8%81%94%E7%BD%91API/" data-toggle="tooltip" data-placement="top" title="UNIX网络编程卷一（套接字联网API）">下一篇：  <span>UNIX网络编程卷一（套接字联网API）</span>
+            </a>
+        </li>
+        
+    </ul>
+</section>
+
+<section class="post-comments">
+
+  
+    <div id="disqus_thread"></div>
+    <script>
+    
+    var disqus_config = function () {
+        this.page.url = "http://localhost:4000/2015/06/ACE%E4%B8%AD%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E7%AE%A1%E7%90%86/";
+        this.page.identifier = "/2015/06/ACE%E4%B8%AD%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E7%AE%A1%E7%90%86/";
+    };
+    var disqus_shortname = 'leopard';
+    
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>要查看<a href="http://disqus.com/?ref_noscript"> Disqus </a>评论，请启用 JavaScript</noscript>
+    
+
+  
+
+</section>
+
+
+            <section class="footer">
+    <footer>
+        <div class = "footer_div">  
+        <nav class="cover-navigation navigation--social">
+          <ul class="navigation">
+
+          
+          <!-- Github -->
+          <li class="navigation__item_social">
+            <a href="https://github.com/leopardpan" title="@leopardpan 的 Github" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/github.png);"></div>
+            </a>
+          </li>
+          
+
+          
+
+          
+
+          
+          <!-- Zhihu -->
+          <li class="navigation__item_social">
+            <a href="https://www.jianshu.com/u/2ada30d8d0f7" title="@2ada30d8d0f7" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/jianshu.png);"></div>
+            </a>
+          </li>
+
+          
+
+          
+          <!-- Weibo -->
+          <li class="navigation__item_social">
+            <a href="http://weibo.com/5366874726" title="@5366874726 的微博" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/weibo.png);"></div>
+            </a>
+          </li>
+          
+
+          
+          
+
+
+          
+          <!-- Email -->
+          <li class="navigation__item_social">
+            <a href="mailto:leopardpan@icloud.com" title="Contact me">
+              <div class="footer-social-icon" style="background:url(/images/email.png);"></div>
+            </a>
+          </li>
+          
+          
+          <!-- RSS -->
+          <li class="navigation__item_social">
+            <a href="/feed.xml" rel="author" title="RSS" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/rss.png);"></div>
+              <span class="label">RSS</span>
+            </a>
+          </li>
+
+          </ul>
+        </nav>
+
+        </div>
+
+        <div class = "footer_div">  
+           <p class="copyright text-muted">
+            Copyright &copy; wuyuchun 2020 Theme by <a href="http://leopardpan.github.io/">leopardpan</a> |
+            <iframe
+                style="margin-left: 2px; margin-bottom:-5px;"
+                frameborder="0" scrolling="0" width="91px" height="20px"
+                src="https://ghbtns.com/github-btn.html?user=leopardpan&repo=leopardpan.github.io&type=star&count=true" >
+            </iframe>
+            </p>
+        	<div align="right">
+    			<link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+          <!-- 访问统计 -->
+          <span id="busuanzi_container_site_pv">
+            本站总访问量
+            <span id="busuanzi_value_site_pv"></span>次
+          </span>
+
+        </div>
+        <div>
+    </footer>
+</section>
+
+        </div>
+    </div>
+    
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="/js/main.js"></script>
+
+<script type="text/javascript" src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+  </body>
+
+</html>

@@ -1,0 +1,166 @@
+I"�<p>listi</p>
+
+<p>[10:18 PM]</p>
+
+<h1 id="目的">目的</h1>
+<p>在工作中，对于网络编程理解运用还是不够好，因此学习这边经典的书籍，加深自己对网络编程的理解。不管现在运用的的是ACE或者ZQT框架，最基本的还是套接字。</p>
+
+<h1 id="背景">背景</h1>
+<p>两个程序进行通信，与两个人进行通话想通的，若是两个人用不同言语进行谈话，那么就是鸡同鸭讲，完成不知其所云，而两个程序通信也是一样的，必须规定好交流的“协议”，其实“协议”就是一套准则，例如两个人都用普通话进行交流，普通话就是协议。</p>
+
+<h1 id="tcpip协议">TCP/IP协议</h1>
+<p>由于本书主要讲解TCP/IP协议，因此注重点也是TCP/IP，TCP/IP是用很广的协议。其实很多的网络程序，都是基于该协议。</p>
+
+<p>用Windows的API编写一个简单的TCP/IP程序（在书中是使用Linux的API完成的，由于用的是Windows，懒得换到Linux，所以就····）</p>
+
+<p>服务端的代码</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;iostream&gt;
+#include &lt;Windows.h&gt;
+#include &lt;time.h&gt;
+
+#pragma    comment(lib,"ws2_32.lib") 
+using namespace std;
+
+#define  PORT 4000
+#define  IP_ADDRESS "135.124.2.22"
+int main(int argc, char* argv[])
+{
+WSADATA  Ws;
+SOCKET ServerSocket, CientSocket;
+struct sockaddr_in LocalAddr, ClientAddr;
+int Ret = 0;
+int AddrLen = 0;
+
+
+//Init Windows Socket
+if ( WSAStartup(MAKEWORD(2,2), &amp;Ws) != 0 )
+{
+	cout&lt;&lt;"Init Windows Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+//Create Socket
+ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+if ( ServerSocket == INVALID_SOCKET )
+{
+	cout&lt;&lt;"Create Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+LocalAddr.sin_family = AF_INET;
+LocalAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+LocalAddr.sin_port = htons(PORT);
+memset(LocalAddr.sin_zero, 0x00, 8);
+
+//Bind Socket
+Ret = bind(ServerSocket, (struct sockaddr*)&amp;LocalAddr, sizeof(LocalAddr));
+if ( Ret != 0 )
+{
+	cout&lt;&lt;"Bind Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+Ret = listen(ServerSocket, 10);
+if ( Ret != 0 )
+{
+	cout&lt;&lt;"listen Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+cout&lt;&lt;"服务端已经启动"&lt;&lt;endl;
+
+AddrLen = sizeof(ClientAddr);
+CientSocket = accept(ServerSocket, (struct sockaddr*)&amp;ClientAddr, &amp;AddrLen);
+if ( CientSocket == INVALID_SOCKET )
+{
+	cout&lt;&lt;"Accept Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+}
+
+cout&lt;&lt;"客户端连接::"&lt;&lt;inet_ntoa(ClientAddr.sin_addr)&lt;&lt;":"&lt;&lt;ClientAddr.sin_port&lt;&lt;endl;
+
+
+//获取系统时间
+time_t t = time(0);
+char szTime[64] = {0};
+strftime(szTime,sizeof(szTime),"%Y/%m/%d %X %A 本年第%j天 %z",localtime(&amp;t));
+
+//把系统时间发送给客户端
+Ret = send(CientSocket, szTime, (int)strlen(szTime), 0);
+if ( Ret == 0 )
+{
+	cout&lt;&lt;"Send Info Complete!"&lt;&lt;endl;
+}
+else
+{
+	cout&lt;&lt;"Send Info Err!"&lt;&lt;endl;
+}
+closesocket(ServerSocket);
+closesocket(CientSocket);
+WSACleanup();
+
+return 0;
+}
+</code></pre></div></div>
+
+<p>客户端的代码</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;iostream&gt;
+#include &lt;Windows.h&gt;
+#pragma    comment(lib,"ws2_32.lib")
+using namespace std;
+
+#define IP_ADDRESS "135.124.2.22"
+#define PORT 4000
+
+int main( int argc , char* argv[] )
+{
+WSADATA ws;
+
+if ( WSAStartup(MAKEWORD(2,2),&amp;ws) != 0 )
+{
+	cout&lt;&lt;"Init Windows Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+SOCKET CientSocket;
+CientSocket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+if ( INVALID_SOCKET == CientSocket )
+{
+	cout&lt;&lt;"create socket failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+struct sockaddr_in ServerAddr;
+ServerAddr.sin_family = AF_INET;
+ServerAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+ServerAddr.sin_port = htons(PORT);
+memset(ServerAddr.sin_zero, 0x00, 8);
+
+int Ret = 0;
+Ret = connect(CientSocket,(struct sockaddr*)&amp;ServerAddr,sizeof(ServerAddr));
+if ( SOCKET_ERROR == Ret )
+{
+	cout&lt;&lt;"Connect Error::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+else
+{
+	cout&lt;&lt;"连接成功!"&lt;&lt;endl;
+}
+char RecvBuffer[MAX_PATH];
+
+memset(RecvBuffer, 0x00, sizeof(RecvBuffer));
+recv(CientSocket, RecvBuffer, MAX_PATH, 0)	
+cout&lt;&lt;"接收到时间信息为:"&lt;&lt;SendBuffer&lt;&lt;endl;
+closesocket(CientSocket);
+WSACleanup();
+return 0;
+}
+</code></pre></div></div>
+
+<p>当然前面的代码有很多的漏洞，比如Recv函数等等，但是这个也仅仅是一个小小例子，（但是代码要保护，，，，，，，，，）。</p>
+
+<h1 id="注意">注意</h1>
+<p>使用TCP时必须小心，因为TCP是一个没有记录边界的字节流协议。（没有边界哦），如果要发送的信息量很大的话，并不保证一次性接收完所有的信息，所以，要循环的接收。</p>
+:ET

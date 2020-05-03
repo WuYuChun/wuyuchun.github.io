@@ -1,0 +1,154 @@
+I"Z<h3 id="简介">简介：</h3>
+<p>　本章介绍什么是 <code class="highlighter-rouge">CocoaPods</code> ,如何使用 <code class="highlighter-rouge">CocoaPods</code> , 以及 <code class="highlighter-rouge">CocoaPods</code> 的原理,和使用 <code class="highlighter-rouge">CocoaPods</code> 时经常出现的一些问题。</p>
+
+<p>　Cocoapods 是 OS X 和 iOS 下的一个第三方库管理工具。我们能使用CocoaPods添加被称作 “Pods”的依赖库,并轻松管理它们的版本,CocoaPods会帮我们配置好这些三方库的路径及开发环境,极大的提升了开发者的工作效率。</p>
+
+<h3 id="安装cocoapods">安装CocoaPods　</h3>
+
+<p>　Mac下自带ruby,使用ruby的gem命令安装,ruby的软件源被墙了,把官方的ruby源替换成国内的淘宝源。</p>
+
+<h3 id="更换gem源">更换Gem源</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>gem sources <span class="nt">--remove</span> https://rubygems.org/
+<span class="nv">$ </span>gem sources <span class="nt">-a</span> https://ruby.taobao.org/
+<span class="nv">$ </span>gem sources <span class="nt">-l</span>
+</code></pre></div></div>
+<ul>
+  <li>1.移除掉原有的源（服务器在国外，速度较慢）。</li>
+  <li>2.等1有反应之后再敲2命令（替换成淘宝上的ruby镜像https）。</li>
+  <li>3.验证是否成功。成功如下：</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="k">***</span> CURRENT SOURCES <span class="k">***</span>
+
+http://ruby.taobao.org/
+
+</code></pre></div></div>
+
+<h3 id="更新gem源">更新Gem源</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nb">sudo </span>gem update <span class="nt">--system</span>
+
+</code></pre></div></div>
+
+<h3 id="安装cocoapods-1">安装cocoapods</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nv">$ </span><span class="nb">sudo </span>gem <span class="nb">install </span>cocoapods
+<span class="nv">$ </span>pod setup
+
+</code></pre></div></div>
+
+<p>pod setup 在执行时会比较慢，因为Cocoapods 要将它的信息下载到 ~/.cocoapods目录下, 耐心等待…</p>
+
+<h4 id="提升cocoapods的安装速度">提升cocoapods的安装速度</h4>
+
+<p>所有的项目的 Podspec 文件都托管在https://github.com/CocoaPods/Specs。第一次执行 pod setup 时，CocoaPods 会将这些podspec索引文件更新到本地的 ~/.cocoapods/目录下，这个索引文件比较大，有 80M 左右。
+作者akinliu 在 gitcafe 和 oschina 上建立了 CocoaPods 索引库的镜像(在国内),我们可以使用CocoaPods国内的镜像索引，操作时会快多了,如gitcafe：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+pod repo remove master
+pod repo add master https://gitcafe.com/akuandev/Specs.git
+pod repo update
+
+</code></pre></div></div>
+
+<h3 id="使用cocoapods">使用cocoapods</h3>
+
+<p>cocoapods安装完成后，使用 pod search 命令来验证一下</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+pod search AFNetworking
+
+
+</code></pre></div></div>
+
+<p>终端将会有如下结果：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+-&gt; AFNetworking <span class="o">(</span>3.0.4<span class="o">)</span>
+A delightful iOS and OS X networking framework.
+pod <span class="s1">'AFNetworking'</span>, <span class="s1">'~&gt; 3.0.4'</span>
+- Homepage: https://github.com/AFNetworking/AFNetworking
+- Source:   https://github.com/AFNetworking/AFNetworking.git
+- Versions: 3.0.4, 3.0.3, 3.0.2, 3.0.1, 3.0.0, 3.0.0-beta.3, 3.0.0-beta.2,
+3.0.0-beta.1, 2.6.3, 2.6.2, 2.6.1, 2.6.0, 2.5.4, 2.5.3, 2.5.2, 2.5.1, 2.5.0,
+2.4.1, 2.4.0, 2.3.1, 2.3.0, 2.2.4, 2.2.3, 2.2.2, 2.2.1, 2.2.0, 2.1.0, 2.0.3,
+2.0.2, 2.0.1, 2.0.0, 2.0.0-RC3, 2.0.0-RC2, 2.0.0-RC1, 1.3.4, 1.3.3, 1.3.2,
+1.3.1, 1.3.0, 1.2.1, 1.2.0, 1.1.0, 1.0.1, 1.0, 1.0RC3, 1.0RC2, 1.0RC1,
+0.10.1, 0.10.0, 0.9.2, 0.9.1, 0.9.0, 0.7.0, 0.5.1 <span class="o">[</span>master repo]
+- Subspecs:
+- AFNetworking/Serialization <span class="o">(</span>3.0.4<span class="o">)</span>
+- AFNetworking/Security <span class="o">(</span>3.0.4<span class="o">)</span>
+- AFNetworking/Reachability <span class="o">(</span>3.0.4<span class="o">)</span>
+- AFNetworking/NSURLSession <span class="o">(</span>3.0.4<span class="o">)</span>
+- AFNetworking/UIKit <span class="o">(</span>3.0.4<span class="o">)</span>
+
+
+-&gt; AFNetworking+AutoRetry <span class="o">(</span>0.0.5<span class="o">)</span>
+Auto Retries <span class="k">for </span>AFNetworking requests
+pod <span class="s1">'AFNetworking+AutoRetry'</span>, <span class="s1">'~&gt; 0.0.5'</span>
+- Homepage: https://github.com/shaioz/AFNetworking-AutoRetry
+- Source:   https://github.com/shaioz/AFNetworking-AutoRetry.git
+- Versions: 0.0.5, 0.0.4, 0.0.3, 0.0.2, 0.0.1 <span class="o">[</span>master repo]
+
+.........太多了，省略
+
+</code></pre></div></div>
+
+<p>pod search 是CocoaPods的一个搜索命令,我们可以用来搜索任何托管在CocoaPods上的三方库。</p>
+
+<p>使用CocoaPods时需要新建一个 Podfile 的文件,cd 到 我的Demo项目里，Demo目录下有三个文件</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+Demo 、  Demo.xcodeproj  、 DemoTests
+
+</code></pre></div></div>
+
+<p>新建 Podfile</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nb">touch </span>Podfile
+
+</code></pre></div></div>
+
+<p>vim 编辑 Podfile</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>vim Podfile
+</code></pre></div></div>
+<p>由于是新建的 Podfile 里面应该是空白的。然后我们在里面添加依赖库，格式如下：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+platform :ios
+pod <span class="s1">'Reachability'</span>,  <span class="s1">'~&gt; 3.0.0'</span>
+pod <span class="s1">'ASIHTTPRequest'</span>
+
+</code></pre></div></div>
+
+<p>‘~&gt; 3.0.0’ 是 Reachability 的版本号, 设定了版本号CocoaPods就会下载对应的版本,ASIHTTPRequest没指定版本号,CocoaPods就会下载最新版本的ASIHTTPRequest。
+退出编辑，执行 pod install 下载三方库。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+pod <span class="nb">install</span>
+
+</code></pre></div></div>
+<p>完成后我Demo项目下的文件多了几个:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Demo 、  Demo.xcodeproj  、 DemoTests （之前的三个）
+
+Demo.xcworkspace 、Podfile 、Podfile.lock 、Pods
+</code></pre></div></div>
+
+<p>这个时候我们打开Demo项目是点击 Demo.xcworkspace 文件了，到此CocoaPods的基本使用已经讲完了，接下来的CocoaPods的原理，和让我们自己的三方库也支持CocoaPods。</p>
+
+<p>待续…</p>
+
+<p><a href="http://blog.jobbole.com/53365/">深入理解 CocoaPods</a></p>
+
+<p><br /></p>
+
+<p>转载请注明：<a href="http://baixin">潘柏信的博客</a> » <a href="http://baixin.io/2016/04/CocoaPod_Use/">点击阅读原文</a></p>
+
+:ET

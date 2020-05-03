@@ -1,0 +1,130 @@
+I"]<p>listi</p>
+
+<p>[11:11 PM PM]</p>
+
+<h1 id="前言">前言</h1>
+<p>C++是一个静态类别的语音，也就是说在编译的时候，会对其类型进行检查。但是C++又是一个灵活性极高的语言，因此就是
+出现<strong>破坏静态类型安全的编码</strong>。</p>
+
+<h1 id="第一种情况以void-为主导">第一种情况：以void *为主导</h1>
+<p>在强制类型转换中，转换到void *类型的结果会将类型的指针的类型信息都会抹除。同时，存在的情况是，基类与派生类之间的转换。
+在《探索C++内存模型》中说道基类与派生类之间的内存模型。如下：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left"> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">基类class子对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">派生类成员</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>当然这是在单继承情况下。若是多继承呢？ <em>在多继承条件下，单一对象往往有多个合法地址</em></p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left"> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">基类subject类型的子对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">基类button类型的子对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">派生类成员</td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p>在接口中使用void *作为类型转换的中介类型，并要求用户在调用接口中的某一个函数时重新提供另一个函数抹除的类型信息，
+这终究不是办法</p>
+</blockquote>
+
+<h1 id="第二种-截断问题">第二种 截断问题</h1>
+
+<p>发生的时机：<em>企图把一个派生类对象的内容复制到另一个基类对象的存储的时刻</em>
+发生的后果：<em>那些派生类型专属的成员数据和成员函数会被截断</em>。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class Employee{
+public:
+    vitual ~Employee();
+    vitual void pay() const;
+protect:
+    void setType( int type){
+        myType_ = type;
+    }
+private:
+    int myType_ ; //不好的的用法
+};
+
+calss Salaried:public Employee{
+    //...
+};
+
+Employee employee;
+Salaried salaried;
+employee = salaried; //发生什么，截断了
+
+</code></pre></div></div>
+
+<p><em>Salaried 类型信息完全被隔离，虚函数表中根本没有放入Salaried类型所指定对应函数入口地址</em></p>
+
+<p>这里也提出一个问题：在设计的时候，要保证截断情况保持赋值结果的状态的合法性。</p>
+
+<hr />
+<p>截断问题的最常见来源，是一个派生类的class类对象被以传值方式传递给一个基类的形参</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>void fire( Employee victim);
+fire(salaried); //被截断
+
+</code></pre></div></div>
+<p><strong>解决方法：传递引用或指针</strong>
+—-</p>
+
+<hr />
+<hr />
+
+<h1 id="赋值和初始化">赋值和初始化</h1>
+<p><strong>初始化：把一段新鲜存储（raw storage）变成一个对象的过程，对于一个class对象来说，这会涵盖搭建一系列内部机能，以
+支持虚函数和虚基类、运行时类别信息以及其他类别相依的信息</strong></p>
+
+<p><strong>赋值 是一个有着合适定义对象的某种状态上所作的一个变化，使该对象处于一个新的状态，赋值操作不会实现对象的类型相依的
+行为背后的内部机能</strong></p>
+
+<p>复制构造和复制赋值的区别，（浅层复制 和 深层赋值）</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+struct X{
+    int *t_;
+    X &amp;operator = (const X &amp;rhs){
+        if( this != &amp;rhs ){
+            delete t_; //！删除一段未定义的内存，作死～～～
+            t_ = new int(*rhs.t_);
+        }
+        return  *this;
+    }
+};
+
+
+int main() {
+    X x;
+    X *buf = (X *)malloc(sizeof(X)); // 申请内存，初始化了吗？
+    X &amp;rx = *buf;
+    rx = x;  //！出现段错误
+    return 0;
+}
+
+</code></pre></div></div>
+:ET

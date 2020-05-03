@@ -1,0 +1,1696 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>wuyuchun</title>
+    <description>欢迎来到我的个人站~</description>
+    <link>http://localhost:4000/</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Mon, 04 May 2020 00:06:13 +0800</pubDate>
+    <lastBuildDate>Mon, 04 May 2020 00:06:13 +0800</lastBuildDate>
+    <generator>Jekyll v4.0.0</generator>
+    
+      <item>
+        <title>cuda的认识</title>
+        <description>&lt;p&gt;[12:51 ]&lt;/p&gt;
+
+&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;传统单线程的例子&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
+ * 简介：用于计算一个数组中元素的和
+ * 注意：这是普通的写法
+ */
+
+#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;vector&amp;gt;
+
+int main(int argc, char *argv[]){
+
+    const int N = 50000;
+
+    //!任务1 创建数组
+    std::vector&amp;lt;int&amp;gt; a(N);
+
+    //!任务2 填充数组
+    for(int i = 0; i &amp;lt; N; ++i){
+        a[i] = i;
+    }
+
+    //!任务3：计算数组中里面的所有的和
+    int sum_A(0);
+    for(int i = 0; i &amp;lt; N; ++i){
+        sum_A += a[i];
+    }
+
+    //!任务4：计算0到N-1之和
+    int sum_check(0);
+    for(int i = 0; i &amp;lt; N; ++i){
+        sum_check += i;
+    }
+
+    //!检查任务的正确性
+    if(sum_A == sum_check){
+        std::cout &amp;lt;&amp;lt; &quot;all right!&quot; &amp;lt;&amp;lt; std::endl;
+    }
+    else{
+        std::cout &amp;lt;&amp;lt; &quot;it's wrong!&quot; &amp;lt;&amp;lt;std::endl;
+    }
+
+    return 0;
+} 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;这个是用cuda编写的例子— &lt;strong&gt;这里使用的是C++ThrustAPI&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
+ * 简介：这个是用cuda的Thrust数据并行API的例子
+ */
+
+
+#include &amp;lt;iostream&amp;gt;
+using namespace std;
+
+#include &amp;lt;thrust/reduce.h&amp;gt;
+#include &amp;lt;thrust/sequence.h&amp;gt;
+#include &amp;lt;thrust/host_vector.h&amp;gt;
+#include &amp;lt;thrust/device_vector.h&amp;gt;
+
+int main(int argc, char *argv[]) {
+
+    const int N = 50000;
+
+    //!创建数组
+    thrust::device_vector&amp;lt;int&amp;gt; a(N);
+
+    //！填充数组 并行
+    thrust::sequence(a.begin(),a.end(),0);
+
+    //！并行计算数组元素之和
+    int sumA = thrust::reduce(a.begin(),a.end(),0);
+
+    //！测试是否异步的
+    std::cout &amp;lt;&amp;lt; &quot;已经调用～～～&quot; &amp;lt;&amp;lt; std::endl;
+
+
+    int sum_check(0);
+
+    //!这里主要测试 异步调用
+    #if 0
+    for(int i = 0; i &amp;lt; N; ++i){
+        sum_check += i;
+    }
+    #endif
+    std::cout &amp;lt;&amp;lt; &quot;sum_A: &quot; &amp;lt;&amp;lt;sum_A &amp;lt;&amp;lt;std::endl;
+
+    if(sum_check == sumA) {
+        std::cout &amp;lt;&amp;lt;&quot;test good!&quot; &amp;lt;&amp;lt; std::endl;
+    }
+    else {
+        std::cout &amp;lt;&amp;lt;&quot;test err!&quot; &amp;lt;&amp;lt;std::endl;
+    }
+
+    return 0;
+} 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;cuda-api&quot;&gt;cuda API&lt;/h1&gt;
+&lt;p&gt;cuda提供了多种API，如下所示（从高层到底层）：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;数据并行 C++ Thrust API&lt;/li&gt;
+  &lt;li&gt;可用于C或者C++的Runtime API&lt;/li&gt;
+  &lt;li&gt;可用于C或者C++的Driver API&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;关键点&quot;&gt;关键点&lt;/h2&gt;
+&lt;p&gt;1.用于CUDA的GPU是安装于主机系统中的独立设备。&lt;/p&gt;
+
+&lt;p&gt;2.GPU运行在一个和主处理器相隔离的存储空间中。&lt;/p&gt;
+
+&lt;p&gt;3.CUDA kernel是可在主机代码中调用而在CUDA设备上运行的子程序 &lt;strong&gt;通过__global__来定义&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;p&gt;4.kernel的调用是异步的，即主机仅仅把要执行的kernel顺序提交给GPU，并不等待其执行完成，然后在直接处理后面其他的任务。&lt;/p&gt;
+
+&lt;p&gt;5.GPU上的基本运行单位是线程&lt;/p&gt;
+</description>
+        <pubDate>Mon, 02 Jan 2017 12:51:00 +0800</pubDate>
+        <link>http://localhost:4000/2017/01/Cuad%E7%9A%84%E8%AE%A4%E8%AF%86/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/01/Cuad%E7%9A%84%E8%AE%A4%E8%AF%86/</guid>
+        
+        <category>cuda</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>C11中的chrono的使用</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[12:18 ]&lt;/p&gt;
+
+&lt;p&gt;[C++ 11增加了三个与时间相关的类型：时间段、时钟、时间点。]&lt;/p&gt;
+&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
+
+&lt;p&gt;现有的系统API中，时间太过于碎片化了。有time_t(秒)、struct timeval(微秒)、struct timespec(纳秒)这几个时间单位，他们的接口非常不统一，点击这里可以体会一下。主要原因：是由于新业务的需求，
+要求提供不同精度的时间。于是每次出现新需求就定义一个新类型。为此，C++11提出一个”一统江湖”的做法，避免这类现象的发生。 时间精度其实也就是时间分辨率。抛开时间量纲单论分辨率
+，其实就是一个比率。如：10001、101、11 、110、11000。这些比率加上距离量纲就变成距离分辨率，加上时间量纲就变成时间分辨率了。为此，C++11定义了一个新的模板类ratio，用于表示比率，定义如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;ration&amp;gt;
+template&amp;lt;std::intmax_t Num, std::intmax_t Denom = 1&amp;gt; //前者是分子，后者是分母 后者表示 1秒
+class ratio;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;为了方便，C++标准委员会还预定义了下面这些分辨率，供用户使用。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;ratio&amp;gt;
+typedef ratio&amp;lt;1,       1000000000000000000&amp;gt; atto;
+typedef ratio&amp;lt;1,          1000000000000000&amp;gt; femto;
+typedef ratio&amp;lt;1,             1000000000000&amp;gt; pico;
+typedef ratio&amp;lt;1,                1000000000&amp;gt; nano;
+typedef ratio&amp;lt;1,                   1000000&amp;gt; micro;
+typedef ratio&amp;lt;1,                      1000&amp;gt; milli;
+typedef ratio&amp;lt;1,                       100&amp;gt; centi;
+typedef ratio&amp;lt;1,                        10&amp;gt; deci;
+typedef ratio&amp;lt;                       10, 1&amp;gt; deca;
+typedef ratio&amp;lt;                      100, 1&amp;gt; hecto;
+typedef ratio&amp;lt;                     1000, 1&amp;gt; kilo;
+typedef ratio&amp;lt;                  1000000, 1&amp;gt; mega;
+typedef ratio&amp;lt;               1000000000, 1&amp;gt; giga;
+typedef ratio&amp;lt;            1000000000000, 1&amp;gt; tera;
+typedef ratio&amp;lt;         1000000000000000, 1&amp;gt; peta;
+typedef ratio&amp;lt;      1000000000000000000, 1&amp;gt; exa;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;时间断&quot;&gt;时间断&lt;/h1&gt;
+
+&lt;p&gt;30分钟，0.5秒都表示一段时间。由此可以得到：一段时间是由”数值+时间单位”组成的。反映在编程上就是要存储两个变量。显然，数值有整数和小数两种，
+究竟是使用整数(int)还是小数(double)应该由用户指定。无疑，用模板表示之是非常合适的。结合前面提到的时间精度，不难得出一段时间应该定义为如下形式：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;chrono&amp;gt;
+template&amp;lt;class Rep, class Period = std::ratio&amp;lt;1&amp;gt; &amp;gt; 
+class duration;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;于是，30秒就有下面几种表示方式：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::duration&amp;lt;int, std::ratio&amp;lt;1,1&amp;gt;&amp;gt; a(30);//30秒
+std::chrono::duration&amp;lt;int&amp;gt; b(30);//30秒
+std::chrono::duration&amp;lt;int, std::ratio&amp;lt;1, 1000&amp;gt;&amp;gt; c(30000);//30 000毫秒
+std::chrono::duration&amp;lt;double, std::ratio&amp;lt;60,1&amp;gt;&amp;gt; d(0.5);//半分钟
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;同样，C++标准委员会预定义了下面这些类型，供我们直接使用。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;std::chrono::nanoseconds    duration&amp;lt;/*signed integer type of at least 64 bits*/, std::nano&amp;gt;
+std::chrono::microseconds   duration&amp;lt;/*signed integer type of at least 55 bits*/, std::micro&amp;gt;
+std::chrono::milliseconds   duration&amp;lt;/*signed integer type of at least 45 bits*/, std::milli&amp;gt;
+std::chrono::seconds    duration&amp;lt;/*signed integer type of at least 35 bits*/&amp;gt;
+std::chrono::minutes    duration&amp;lt;/*signed integer type of at least 29 bits*/, std::ratio&amp;lt;60&amp;gt;&amp;gt;
+std::chrono::hours  duration&amp;lt;/*signed integer type of at least 23 bits*/, std::ratio&amp;lt;3600&amp;gt;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;又是讨厌的implementation-defined，gcc4.9.0的一个实现为：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;typedef duration&amp;lt;int64_t, nano&amp;gt;         nanoseconds;
+typedef duration&amp;lt;int64_t, micro&amp;gt;        microseconds;
+typedef duration&amp;lt;int64_t, milli&amp;gt;        milliseconds;
+typedef duration&amp;lt;int64_t&amp;gt;           seconds;
+typedef duration&amp;lt;int64_t, ratio&amp;lt; 60&amp;gt;&amp;gt;   minutes;
+typedef duration&amp;lt;int64_t, ratio&amp;lt;3600&amp;gt;&amp;gt;  hours;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;当定义了一个时间段后，如何从中得知该时间段类型的rep和period模板参数的类型呢？其实，当我们用具体的类型实例化duration模板类后，
+实例化的类就会有rep和period这两个成员类型。于是，可以借助C++11中的关键字decltype以及直接从定义中获取。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+typedef std::chrono::duration&amp;lt;int, std::ratio&amp;lt;60&amp;gt;&amp;gt; Minus;
+Minus::rep a = 30; //a是int类型
+Minus::period per;//per的类型是 std::ration&amp;lt;60, 1&amp;gt;。即per.num 为60， per.den 为1
+
+Minus twenty_seconds(20);
+decltype(twenty_seconds.count()) b = 30;//后面会介绍count()的返回值类型, b的类型为int
+decltype(twenty_seconds)::rep e = 40;//e的类型为int
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;duration模板类提供了一个成员函数count()用户获取该时间段的值，这个值也称为滴答数。它的返回值类型就是实例化后成员类型rep。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::seconds twenty_sec(20);
+int c = twenty_sec.count();//c等于20
+std::chrono::duration&amp;lt;double&amp;gt; half_sec(0.5);
+double d = half_sec.count();//d等于0.5
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;时钟&quot;&gt;时钟&lt;/h1&gt;
+
+&lt;p&gt;时钟有电子表、怀表、秒表、原子钟等。这些时钟的时间精度有所不同。此外，对于电子表的时间是无法取小数的，而怀表则可以人为地取小数。
+这说明不同的时钟也会有前面时间段类型duration的rep和period这两个属性。并且也是以成员类型的形式出现。但时钟类本身不是模板类。 
+C++11为我们提供了三种时钟类型：system_clock、steady_clock、high_resolution_clock。 这三个时间类都提供了rep、period、duration成员类型。
+因为各个系统能提供的时间精度可能不同，所以period的真正类型是implementation-defined的。这三个时钟类都提供了一个静态成员函数now()用于获取当前时间，该函数的返回值是一个time_point类型，后面会介绍。 
+&lt;strong&gt;注意：，虽然这三个时钟都很多相同的成员类型和成员函数，但它们是没有亲缘关系的。这三个时钟类型都是类，并非模板类。&lt;/strong&gt;
+这三个时钟有什么区别呢？system_clock就类似Windows系统右下角那个时钟，是系统时间。明显那个时钟是可以乱设置的。明明是早上10点，
+却可以设置成下午3点。steady_clock则针对system_clock可以随意设置这个缺陷而提出来的，他表示时钟是不能设置的。想了解更多，可以点击这里。high_resolution_clock则是一个高分辨率时钟。 
+system_clock除了now()函数外，还提供了to_time_t()静态成员函数。用于将系统时间转换成熟悉的std::time_t类型，得到了std::time_t类型的值，就可以很方便地打印当前时间了。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto tp = std::chrono::system_clock::now();
+std::time_t cur_time = std::chrono::system_clock::to_time_t(tp);
+std::string str_time = std::ctime(&amp;amp;cur_time);
+std::cout&amp;lt;&amp;lt;str_time&amp;lt;&amp;lt;std::endl;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;注意：不要将steady_clock、high_resolution_clock时钟的now()返回值作为to_time_t的参数，这会导致编译通不过。因为类型不匹配，后面会详解。 
+其实，如果读者有把刚才那个链接点开，并去了解的steady_clock的话，不用了解now()返回值类型就能知道这样做肯定是不行的了。
+steady_clock的实现是使用monotonic时间，而monotonic时间一般是从boot启动后开始计数的。明显这不能获取日历时间(年月日时分秒)。
+那么steady_clock有什么用途呢？时间比较！并且是不受用户调整系统时钟影响的时间比较。简单的例子如下：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto begin = std::chrono::steady_clock::now();
+for(int i = 0; i &amp;lt; 10000000; ++i)
+{
+    //复杂的数学运算
+}
+auto end = std::chrono::steady_clock::now();
+auto diff = (end - begin).count();//end-begin得到一个duration类型
+std::cout&amp;lt;&amp;lt;diff&amp;lt;&amp;lt;std::endl;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;即使在做数学运算的时候，有人修改了系统时间，也能准确计算出for循环消耗的时间。&lt;/p&gt;
+
+&lt;h1 id=&quot;时间点&quot;&gt;时间点&lt;/h1&gt;
+
+&lt;p&gt;前面已经指出：时钟类的now()函数的返回值是一个time_point类(型)。不言而喻，时间点(time_point)必然是时钟相关的。
+从怀表读取到的时间(点)只有小时、分钟、秒，手机则能提供日期+时分秒。此外，不同时钟提供的时间精度也有所不同。所以，
+时间点(time_point)类至少得有时钟类型、时间精度这两个属性。同前面介绍的时间段模板类一样，这两个属性也是以模板参数的形式出现。time_point的定义如下：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;chrono&amp;gt;
+template&amp;lt; class Clock, class Duration = typename Clock::duration &amp;gt; 
+class time_point;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;时间精度是duration类，默认的时钟模板参数提供的duration。时钟模板参数除了前面介绍的那三个时钟(这是C++默认提供的)外，还可以是码农自己定义的时钟类。 
+同前面的时间段类和时钟类一样，时间点类也提供了rep、period、duration、clock这几个成员类型。
+前面已经指出，各个时钟能提供的时间精度是implementation-defined的。所以应该如下面代码那样获取时钟的now()函数返回值。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;auto tp = std::chrono::system_clock::now();
+std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;下面代码是不正确的，不具有可移植性。例子来自stackoverflow。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;std::chrono::time_point&amp;lt;std::chrono::system_clock,std::chrono::nanoseconds&amp;gt; time_point;
+time_point = std::chrono::system_clock::now();
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;除了从时钟类的now函数中获取一个time_point，还可以直接构造一个time_point对象。time_point模板类的构造函数有无参的、
+用duration作为参数这两个构造函数。对此，我感到很奇怪：直接构造出来的time_point有什么含义呢？
+time_point有一个time_since_epoch()成员函数，返回从epoch时间到此刻的时间段。epoch时间是时钟的开启时间。
+对于system_clock和high_resolution_clock来说，epoch是1970-01-01T00:00:00。熟悉C语言time()函数的读者对此应该不陌生。
+steady_clock时钟则是boot启动时间，所以不应该对steady_clock::now()返回的time_point调用time_since_epoch()。下面是霸王强上弓使用，打印出来的时间是1970年的。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto tp = std::chrono::steady_clock::now();
+std::time_t cur_time = std::chrono::duration_cast&amp;lt;std::chrono::seconds&amp;gt;(tp.time_since_epoch()).count();
+std::string str_time = std::ctime(&amp;amp;cur_time);
+cout&amp;lt;&amp;lt;str_time&amp;lt;&amp;lt;endl;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;如果time_point不是从时钟类的now()返回值得来的，而是直接构造出来的话，那么它调用time_since_epoch()的返回值就等同于构造函数中的duration参数。&lt;/p&gt;
+
+&lt;h1 id=&quot;运算&quot;&gt;运算&lt;/h1&gt;
+
+&lt;p&gt;一段时间的加减乘除无疑是合理的，当然关系比较也是合理的。C++标准委员会还把取模运算也变成合法的了，不仅仅模一个数值合法，模duration类也是合法的。于是有下面这些运算： 
+duration运算
+—
+       具体的使用例子就不写了，读者可以参考en.cppreference.com 
+       上面的运算都是二元运算，如果参与运算的两个duration具有相同的模板参数，那直接运行即可。如果不同，那么将发生隐式转换：int-&amp;gt;double; 低分辨率-&amp;gt;高分辨率。比如：
+—&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::duration&amp;lt;int&amp;gt; two(2);
+std::chrono::duration&amp;lt;double, std::ratio&amp;lt;60&amp;gt;&amp;gt; thirty(0.5);
+
+auto ad = two + thirty;
+cout&amp;lt;&amp;lt;sizeof(decltype(ad)::rep)&amp;lt;&amp;lt;endl;//8
+cout&amp;lt;&amp;lt;ad.count()&amp;lt;&amp;lt;&quot;\t&quot;&amp;lt;&amp;lt;decltype(ad)::period::num&amp;lt;&amp;lt;&quot;/&quot;&amp;lt;&amp;lt;decltype(ad)::period::den&amp;lt;&amp;lt;endl;//32  1/1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;如果参与运算的两个duration具有不同的模板参数，那么能不能进行+=和-=这里运算呢？
+a+=b等同于a=a+b。a+b肯定是可以的，现在问题转换为a=c是否可行？从低精度(包含Rep和Period)到高精度的隐式转换是可行的，反之则是不可以的。因为这将导致截断，丢失部分信息。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::minutes a(30);
+std::chrono::seconds b = a;//OK
+std::chrono::minutes c = b;//compile error
+
+std::chrono::duration&amp;lt;double, std::ratio&amp;lt;60&amp;gt;&amp;gt; d(3);
+std::chrono::seconds e = d;//compile error
+std::chrono::duration&amp;lt;double&amp;gt; f = d;//OK
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;如果确实需要进行转换的话，那么需要使用duration_cast进行显式转换。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::seconds a(30);
+std::chrono::minutes b = std::chrono::duration_cast&amp;lt;std::chrono::minutes&amp;gt;(a);
+cout&amp;lt;&amp;lt;b.count()&amp;lt;&amp;lt;endl;//结果是0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//下面是system_clock时钟类to_time_t函数的gcc实现
+static std::time_t to_time_t(const time_point&amp;amp; __t) noexcept
+{
+    return std::time_t(duration_cast&amp;lt;chrono::seconds&amp;gt; (__t.time_since_epoch()).count());
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;hr /&gt;
+
+&lt;p&gt;time_point类也有一些运算，如下图： 
+time_point运算&lt;/p&gt;
+
+&lt;p&gt;gcc4.9.0实现time_point模板类时，time_point内部有一个duration类型的成员变量。
+所以对于tp+=d和dp-=d的实现，都是直接对内部的成员变量直接调用+=，-=。所以调用者必须保证精度的正确性，否则编译出错。&lt;/p&gt;
+
+&lt;hr /&gt;
+</description>
+        <pubDate>Sun, 04 Dec 2016 12:18:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/</guid>
+        
+        <category>c++</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>ifstream和eof的使用</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[15:40 ]&lt;/p&gt;
+
+&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;最近有一测试，需要分别读取不同的图片以及相关的配置信息，以便测试程序功能是否能达到所期望的要求。想这样的需求，为了方便
+就是想到了以文件的形式进行读取。&lt;/p&gt;
+
+&lt;h1 id=&quot;动手&quot;&gt;动手&lt;/h1&gt;
+&lt;p&gt;开始编码，写完代码如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;// 存储图片相关的信息
+struct IMGINFO {
+    int count_;
+    std::string img_file_name_;
+    std::string pmap_;
+};
+
+
+// 读取文件
+int read_file(const std::string filename, std::vector&amp;lt;IMGINFO&amp;gt; &amp;amp;result) {
+
+    if (filename.empty()) {
+        std::cout &amp;lt;&amp;lt; &quot;filename is NULL&quot; &amp;lt;&amp;lt; std::endl;
+        return -1;
+    }
+    result.clear();
+
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cout &amp;lt;&amp;lt; &quot;open file err!&quot; &amp;lt;&amp;lt; std::endl;
+        return -2;
+    }
+
+    // ！读取文件
+    IMGINFO imginfo;
+    while (!file.eof()) {
+        file &amp;gt;&amp;gt; imginfo.img_file_name_;
+        file &amp;gt;&amp;gt; imginfo.count_;
+        file &amp;gt;&amp;gt; imginfo.pmap_;
+        result.push_back(imginfo);
+    }
+    file.close();
+    return 0;
+}
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;而文本文件的信息如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;img_0001.jpg
+12
+(12,12),(13,13)(14,14)
+img_0002.jpg
+13
+(12,12),(13,13)(14,14)
+img_0003.jpg
+14
+(12,12),(13,13)(14,14)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;问题来了，最后输出的结果含有几个数据？&lt;/strong&gt;：这样会多一个数据，因为用eof判断文件是否结尾是有问题的&lt;/p&gt;
+
+&lt;h1 id=&quot;解决&quot;&gt;解决&lt;/h1&gt;
+
+&lt;p&gt;在使用eof判断文件是否结尾的时候，当发现已无可读写数据，此时流才知道到达了结尾，这时才将标志eofbit修改为true.
+也就是说，读取到最后一行(12,12),(13,13)(14,14)时，标志位还没有修改true,接着继续运行，发现已经到文件尾，才设置，这时，
+所保存的变量是上一次的值，因此也就会增加一个数据。&lt;/p&gt;
+
+&lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
+&lt;p&gt;C++流的使用还是存在坑的～～。&lt;/p&gt;
+</description>
+        <pubDate>Sat, 22 Oct 2016 15:40:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/10/ifstream%E5%92%8Ceof%E7%9A%84%E4%BD%BF%E7%94%A8/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/10/ifstream%E5%92%8Ceof%E7%9A%84%E4%BD%BF%E7%94%A8/</guid>
+        
+        <category>c++</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>glog源码（2）</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[15:40 ]&lt;/p&gt;
+
+&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;前面大概讲解一下glog的关键类，下面将会针对与LogMessage类。以下代码由于glog进行裁剪过来的。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//用于输出消息，当写满消息后，调用析构函数，使用Flush
+class GOOGLE_GLOG_DLL_DECL LogMessage {
+public:
+  enum {
+    kNoLogPrefix = -1
+  };
+
+  class GOOGLE_GLOG_DLL_DECL LogStream : public std::ostream {
+
+  public:
+    LogStream(char *buf, int len, int ctr)
+        : std::ostream(NULL),
+          streambuf_(buf, len),
+          ctr_(ctr),
+          self_(this) {
+      rdbuf(&amp;amp;streambuf_);
+    }
+
+    int ctr() const { return ctr_; }
+    void set_ctr(int ctr) { ctr_ = ctr; }
+    LogStream* self() const { return self_; }
+
+    // Legacy std::streambuf methods.
+    size_t pcount() const { return streambuf_.pcount(); }
+    char* pbase() const { return streambuf_.pbase(); }
+    char* str() const { return pbase(); }
+
+  private:
+    LogStream(const LogStream&amp;amp;);  //！对象语义 而不是值语义
+    LogStream&amp;amp; operator=(const LogStream&amp;amp;); //！对象语义 而不是值语义
+    base_logging::LogStreamBuf streambuf_;
+    int ctr_;  // Counter hack (for the LOG_EVERY_X() macro)
+    LogStream *self_;  // Consistency check hack
+  };
+
+public:
+  // icc 8 requires this typedef to avoid an internal compiler error.
+  typedef void (LogMessage::*SendMethod)();
+
+  LogMessage(const char* file, int line, LogSeverity severity, int ctr,
+             SendMethod send_method);
+
+  // Two special constructors that generate reduced amounts of code at
+  // LOG call sites for common cases.
+
+  // Used for LOG(INFO): Implied are:
+  // severity = INFO, ctr = 0, send_method = &amp;amp;LogMessage::SendToLog.
+  //
+  // Using this constructor instead of the more complex constructor above
+  // saves 19 bytes per call site.
+  LogMessage(const char* file, int line);
+
+  // Used for LOG(severity) where severity != INFO.  Implied
+  // are: ctr = 0, send_method = &amp;amp;LogMessage::SendToLog
+  //
+  // Using this constructor instead of the more complex constructor above
+  // saves 17 bytes per call site.
+  LogMessage(const char* file, int line, LogSeverity severity);
+
+  // Constructor to log this message to a specified sink (if not NULL).
+  // Implied are: ctr = 0, send_method = &amp;amp;LogMessage::SendToSinkAndLog if
+  // also_send_to_log is true, send_method = &amp;amp;LogMessage::SendToSink otherwise.
+  LogMessage(const char* file, int line, LogSeverity severity, LogSink* sink,
+             bool also_send_to_log);
+
+  // Constructor where we also give a vector&amp;lt;string&amp;gt; pointer
+  // for storing the messages (if the pointer is not NULL).
+  // Implied are: ctr = 0, send_method = &amp;amp;LogMessage::SaveOrSendToLog.
+  LogMessage(const char* file, int line, LogSeverity severity,
+             std::vector&amp;lt;std::string&amp;gt;* outvec);
+
+  // Constructor where we also give a string pointer for storing the
+  // message (if the pointer is not NULL).  Implied are: ctr = 0,
+  // send_method = &amp;amp;LogMessage::WriteToStringAndLog.
+  LogMessage(const char* file, int line, LogSeverity severity,
+             std::string* message);
+
+  // A special constructor used for check failures
+  LogMessage(const char* file, int line, const CheckOpString&amp;amp; result);
+
+  ~LogMessage();
+
+  // Flush a buffered message to the sink set in the constructor.  Always
+  // called by the destructor, it may also be called from elsewhere if
+  // needed.  Only the first call is actioned; any later ones are ignored.
+  void Flush();
+
+  // An arbitrary limit on the length of a single log message.  This
+  // is so that streaming can be done more efficiently.
+  static const size_t kMaxLogMessageLen;
+
+  // Theses should not be called directly outside of logging.*,
+  // only passed as SendMethod arguments to other LogMessage methods:
+  void SendToLog();  // Actually dispatch to the logs
+  void SendToSyslogAndLog();  // Actually dispatch to syslog and the logs
+
+  // Call abort() or similar to perform LOG(FATAL) crash.
+  static void  Fail();
+
+  std::ostream&amp;amp; stream();
+
+  int preserved_errno() const;
+
+  // Must be called without the log_mutex held.  (L &amp;lt; log_mutex)
+  static int64 num_messages(int severity);
+
+  struct LogMessageData;
+
+private:
+  // Fully internal SendMethod cases:
+  void SendToSinkAndLog();  // Send to sink if provided and dispatch to the logs
+  void SendToSink();  // Send to sink if provided, do nothing otherwise.
+
+  // Write to string if provided and dispatch to the logs.
+  void WriteToStringAndLog();
+
+  void SaveOrSendToLog();  // Save to stringvec if provided, else to logs
+
+  void Init(const char* file, int line, LogSeverity severity,
+            void (LogMessage::*send_method)());
+
+  // Used to fill in crash information during LOG(FATAL) failures.
+  void RecordCrashReason(glog_internal_namespace_::CrashReason* reason);
+
+  // Counts of messages sent at each priority:
+  static int64 num_messages_[NUM_SEVERITIES];  // under log_mutex
+
+  // We keep the data in a separate struct so that each instance of
+  // LogMessage uses less stack space.
+  LogMessageData* allocated_;
+  LogMessageData* data_;
+
+  friend class LogDestination;
+
+  LogMessage(const LogMessage&amp;amp;); //！对象语义 而不是值语义
+  void operator=(const LogMessage&amp;amp;);//！对象语义 而不是值语义
+};
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;从源码中，LogMessage有很多的构造函数。&lt;strong&gt;在源码中有说明最好不要使用LogMessage的构造函数来生成日志信息&lt;/strong&gt;。下面用其的构造函数来生成日记信息，看看效果如何：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int main(int argc , char * argv[]){
+
+	google::InitGoogleLogging(argv[0]);
+	std::string strMsg = &quot;string&quot;;
+	const char *file = &quot;file&quot;;
+	google::LogMessage myLog(file, 20, 0, &amp;amp;strMsg);
+	myLog.stream() &amp;lt;&amp;lt; &quot;test!!!!!&quot;;
+	myLog.Flush();
+	return EXIT_SUCCESS;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;打印出来的日记信息：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Log file created at: 2016/09/10 17:00:38
+Running on machine: WUYUCHUN-PC
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0910 17:00:38.834996  4088 file:20] test!!!!!
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;从结果中看来与使用  &lt;strong&gt;LOG(INFO)«“test!!!!!”&lt;/strong&gt;  的效果是一样的，从这里也可以看出调用流程。&lt;/p&gt;
+
+&lt;h1 id=&quot;原理&quot;&gt;原理&lt;/h1&gt;
+&lt;p&gt;glog借助ostream来实现日记消息的输出，通过对ostream进行继承重写定义自己的输出的格式，从以上的代码就可以看出。在这里先提示ostream如何进行 &lt;strong&gt;“类型可扩展”&lt;/strong&gt; 。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class Date{
+public:
+    Date(int year,int month, int day):year_(year),month_(month),day_(day){
+        ;
+    }
+    void writeTo(std::ostream &amp;amp;os) const{
+        os &amp;lt;&amp;lt; year_ &amp;lt;&amp;lt; month_ &amp;lt;&amp;lt; day_;
+    }
+private:
+    int year_,month_,data_;
+}
+
+std::ostream &amp;amp;operator &amp;lt;&amp;lt; (std::ostream, const Date &amp;amp;date){
+    data.writeTo(os);
+    return os;
+}
+
+int main(int argc, char *argv[]){
+    Date date(2000,0,0);
+    std::cout &amp;lt;&amp;lt; date &amp;lt;&amp;lt; std::endl;
+}
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;从这里可以看出，glog在输出消息的时候选用ostream，以便能自己进行扩展。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;// Output the COUNTER value. This is only valid if ostream is a
+// LogStream.
+ostream&amp;amp; operator&amp;lt;&amp;lt;(ostream &amp;amp;os, const PRIVATE_Counter&amp;amp;) {
+#ifdef DISABLE_RTTI
+	LogMessage::LogStream *log = static_cast&amp;lt;LogMessage::LogStream*&amp;gt;(&amp;amp;os);
+#else
+	LogMessage::LogStream *log = dynamic_cast&amp;lt;LogMessage::LogStream*&amp;gt;(&amp;amp;os);
+#endif
+	CHECK(log &amp;amp;&amp;amp; log == log-&amp;gt;self())
+		&amp;lt;&amp;lt; &quot;You must not use COUNTER with non-glog ostream&quot;;
+	os &amp;lt;&amp;lt; log-&amp;gt;ctr();
+	return os;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;iostream 的另外一个问题是线程安全性。stdio 的函数是线程安全的，而且 C 语言还提供了 flockfile(3)/funlockfile(3) 之类的函数来明确控制 FILE* 的加锁与解锁。
+iostream 在线程安全方面没有保证，就算单个 operator« 是线程安全的，也不能保证原子性。因为 cout « a « b; 是两次函数调用，
+相当于 cout.operator«(a).operator«(b)。两次调用中间可能会被打断进行上下文切换，造成输出内容不连续，插入了其他线程打印的字符。
+而 fprintf(stdout, “%s %d”, a, b); 是一次函数调用，而且是线程安全的，打印的内容不会受其他线程影响。因此，iostream 并不适合在多线程程序中做 logging。
+&lt;a href=&quot;http://www.cnblogs.com/Solstice/archive/2011/07/17/2108715.html&quot;&gt;链接&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;glog使用LogMessageData数据结构来组织消息，代码给出的解释的为 &lt;strong&gt;we keep the data in a spearate struct so that each instance of LogMessage uses less stack 
+space&lt;/strong&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;struct LogMessage::LogMessageData  {
+	LogMessageData();
+
+	int preserved_errno_;      // preserved errno
+	// Buffer space; contains complete message text.
+	char message_text_[LogMessage::kMaxLogMessageLen+1];
+	LogStream stream_;
+	char severity_;      // What level is this LogMessage logged at?
+	int line_;                 // line number where logging call is.
+	void (LogMessage::*send_method_)();  // Call this in destructor to send
+	union {  // At most one of these is used: union to keep the size low.
+		LogSink* sink_;             // NULL or sink to send message to
+		std::vector&amp;lt;std::string&amp;gt;* outvec_; // NULL or vector to push message onto
+		std::string* message_;             // NULL or string to write message into
+	};
+	time_t timestamp_;            // Time of creation of LogMessage
+	struct ::tm tm_time_;         // Time of creation of LogMessage
+	size_t num_prefix_chars_;     // # of chars of prefix in this message
+	size_t num_chars_to_log_;     // # of chars of msg to send to log
+	size_t num_chars_to_syslog_;  // # of chars of msg to send to syslog
+	const char* basename_;        // basename of file that called LOG
+	const char* fullname_;        // fullname of file that called LOG
+	bool has_been_flushed_;       // false =&amp;gt; data has not been flushed
+	bool first_fatal_;            // true =&amp;gt; this was first fatal msg
+
+private:
+	LogMessageData(const LogMessageData&amp;amp;);
+	void operator=(const LogMessageData&amp;amp;);
+};
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;结论&quot;&gt;结论&lt;/h1&gt;
+&lt;p&gt;从Logmessage类的继承组合来说，跟iostream中的继承和组合类似，这就是C++ I/O中输出。下图给出了一张图，也许更能说明问题。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://images.cnblogs.com/cnblogs_com/Solstice/201107/201107171508102461.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sat, 10 Sep 2016 15:40:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81-2/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81-2/</guid>
+        
+        <category>c++</category>
+        
+        <category>glog</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>glog源码（1）</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[07:24 PM]&lt;/p&gt;
+
+&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;glog是一个应用级别的日记系统，使用非常方便，重要的代码行为8K，下面仅仅是记录自己看glog源码时候的一些关键点。
+&lt;a href=&quot;https://github.com/google/glog&quot;&gt;glog链接&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;流程&quot;&gt;流程&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;若是设计一个日记系统，需要考虑的点有哪些？&lt;/strong&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;1.系统中当前仅当有一个日记输出，也就是说，日记的输出是顺序&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;2.输出的消息格式，以及等级&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;3.输出的日记文件，以及文件的组织&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;流程如图：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://img.blog.csdn.net/20160908194848945&quot; alt=&quot;liucheng Image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;其中LogMessage类是用于组织消息内容，而LogDestination是用于组织消息的载体–文件的组织&lt;/strong&gt;，其中所谓的消息流就是通过这样写入到磁盘中的，当然
+其中代码中有很多的技巧之处。&lt;/p&gt;
+
+&lt;p&gt;在实际使用中，在代码中一般用glog所定义的宏进行消息的输出，如下图：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;if(count &amp;lt; 5 ){
+    LOG(INFO) &amp;lt;&amp;lt; &quot;less 5&quot;;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;输出的日记文件在：（linux）/tmp，类似&lt;em&gt;example.bin.username-MS-$$.test.log.INFO.20160908-141658.6235&lt;/em&gt;这种，
+（window）则是在用户/appdata/tmp/。当然这个的前提是没有设置glog的输出目录，而仅仅使用默认的。&lt;/p&gt;
+
+&lt;h2 id=&quot;log宏&quot;&gt;LOG（）宏&lt;/h2&gt;
+
+&lt;p&gt;glog使用宏作为日记输出，这对于应用人员来说是非常方便，并且其也定义了相应的等级，根据宏的拼接，来生成LogMessage，如下图&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://img.blog.csdn.net/20160908200332370&quot; alt=&quot;hong Image&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;组织消息的类&quot;&gt;组织消息的类&lt;/h2&gt;
+&lt;p&gt;关于消息的各个类，如下图所见，但是其中图与代码并不是一一对应，缺少一些小的细节，但是大体上是能反应关系的，其中用于&lt;strong&gt;C++的流的概念&lt;/strong&gt;。
+&lt;img src=&quot;http://img.blog.csdn.net/20160908201239180&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;组织日记文件的类&quot;&gt;组织日记文件的类&lt;/h2&gt;
+
+&lt;p&gt;这个是用于组织日记文件的类，具体的成员变量和成员函数没有给出。
+&lt;img src=&quot;http://img.blog.csdn.net/20160910145818439&quot; alt=&quot;destion&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
+</description>
+        <pubDate>Thu, 08 Sep 2016 19:24:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81(1)/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81(1)/</guid>
+        
+        <category>c++</category>
+        
+        <category>glog</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>C++错误思考(4)</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[11:11 PM PM]&lt;/p&gt;
+
+&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;C++是一个静态类别的语音，也就是说在编译的时候，会对其类型进行检查。但是C++又是一个灵活性极高的语言，因此就是
+出现&lt;strong&gt;破坏静态类型安全的编码&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h1 id=&quot;第一种情况以void-为主导&quot;&gt;第一种情况：以void *为主导&lt;/h1&gt;
+&lt;p&gt;在强制类型转换中，转换到void *类型的结果会将类型的指针的类型信息都会抹除。同时，存在的情况是，基类与派生类之间的转换。
+在《探索C++内存模型》中说道基类与派生类之间的内存模型。如下：&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt; &lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;基类class子对象&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;派生类成员&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;当然这是在单继承情况下。若是多继承呢？ &lt;em&gt;在多继承条件下，单一对象往往有多个合法地址&lt;/em&gt;&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt; &lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;基类subject类型的子对象&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;基类button类型的子对象&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;派生类成员&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;在接口中使用void *作为类型转换的中介类型，并要求用户在调用接口中的某一个函数时重新提供另一个函数抹除的类型信息，
+这终究不是办法&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h1 id=&quot;第二种-截断问题&quot;&gt;第二种 截断问题&lt;/h1&gt;
+
+&lt;p&gt;发生的时机：&lt;em&gt;企图把一个派生类对象的内容复制到另一个基类对象的存储的时刻&lt;/em&gt;
+发生的后果：&lt;em&gt;那些派生类型专属的成员数据和成员函数会被截断&lt;/em&gt;。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class Employee{
+public:
+    vitual ~Employee();
+    vitual void pay() const;
+protect:
+    void setType( int type){
+        myType_ = type;
+    }
+private:
+    int myType_ ; //不好的的用法
+};
+
+calss Salaried:public Employee{
+    //...
+};
+
+Employee employee;
+Salaried salaried;
+employee = salaried; //发生什么，截断了
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;em&gt;Salaried 类型信息完全被隔离，虚函数表中根本没有放入Salaried类型所指定对应函数入口地址&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;这里也提出一个问题：在设计的时候，要保证截断情况保持赋值结果的状态的合法性。&lt;/p&gt;
+
+&lt;hr /&gt;
+&lt;p&gt;截断问题的最常见来源，是一个派生类的class类对象被以传值方式传递给一个基类的形参&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;void fire( Employee victim);
+fire(salaried); //被截断
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;解决方法：传递引用或指针&lt;/strong&gt;
+—-&lt;/p&gt;
+
+&lt;hr /&gt;
+&lt;hr /&gt;
+
+&lt;h1 id=&quot;赋值和初始化&quot;&gt;赋值和初始化&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;初始化：把一段新鲜存储（raw storage）变成一个对象的过程，对于一个class对象来说，这会涵盖搭建一系列内部机能，以
+支持虚函数和虚基类、运行时类别信息以及其他类别相依的信息&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;赋值 是一个有着合适定义对象的某种状态上所作的一个变化，使该对象处于一个新的状态，赋值操作不会实现对象的类型相依的
+行为背后的内部机能&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;复制构造和复制赋值的区别，（浅层复制 和 深层赋值）&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+struct X{
+    int *t_;
+    X &amp;amp;operator = (const X &amp;amp;rhs){
+        if( this != &amp;amp;rhs ){
+            delete t_; //！删除一段未定义的内存，作死～～～
+            t_ = new int(*rhs.t_);
+        }
+        return  *this;
+    }
+};
+
+
+int main() {
+    X x;
+    X *buf = (X *)malloc(sizeof(X)); // 申请内存，初始化了吗？
+    X &amp;amp;rx = *buf;
+    rx = x;  //！出现段错误
+    return 0;
+}
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+</description>
+        <pubDate>Wed, 07 Sep 2016 23:15:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/09/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/09/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/</guid>
+        
+        <category>C++</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>Ramme Jekyll Theme</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://localhost:4000/&quot; alt=&quot;Logo&quot; class=&quot;selfie&quot; /&gt;&lt;/p&gt;
+
+&lt;center&gt;&lt;b&gt;Ramme&lt;/b&gt; is a simple jekyll theme.&lt;/center&gt;
+
+&lt;h2 id=&quot;about&quot;&gt;About&lt;/h2&gt;
+
+&lt;p&gt;I made this theme after seeing this &lt;a href=&quot;http://spoonm.org/share/rice/01.png&quot;&gt;screenshot&lt;/a&gt;. I took some parts from @mmistakes, like TOC, sample posts. I never tought making a theme from scratch would be this hard. And it’s still WIP.&lt;/p&gt;
+
+&lt;p&gt;I’m not a designer or something, so I’m sure there is a better way to make this theme. But it’s working and looks acceptable for different screen sizes. If something looks extremely ugly and you can’t resist to fix it, just send me a PR. I will be grateful.&lt;/p&gt;
+
+&lt;p&gt;I see some people using this theme. I need to search on Github to find who use it. But I don’t want to search like this. If you like this theme or using it, please give a &lt;strong&gt;star&lt;/strong&gt; for motivation.&lt;/p&gt;
+
+&lt;iframe src=&quot;https://ghbtns.com/github-btn.html?user=TaylanTatli&amp;amp;repo=Ramme&amp;amp;type=star&amp;amp;count=true&amp;amp;size=large&quot; frameborder=&quot;0&quot; scrolling=&quot;0&quot; width=&quot;160px&quot; height=&quot;30px&quot;&gt;&lt;/iframe&gt;
+
+&lt;h2 id=&quot;installation&quot;&gt;Installation&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Fork the &lt;a href=&quot;https://github.com/TaylanTatli/Ramme/fork&quot;&gt;Repo&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Edit &lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt; file.&lt;/li&gt;
+  &lt;li&gt;Remove sample posts from &lt;code class=&quot;highlighter-rouge&quot;&gt;_posts&lt;/code&gt; folder and add yours.&lt;/li&gt;
+  &lt;li&gt;Edit &lt;code class=&quot;highlighter-rouge&quot;&gt;index.md&lt;/code&gt; file in &lt;code class=&quot;highlighter-rouge&quot;&gt;about&lt;/code&gt; folder.&lt;/li&gt;
+  &lt;li&gt;Change repo name to &lt;code class=&quot;highlighter-rouge&quot;&gt;YourUserName.github.io&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;That’s all.&lt;/p&gt;
+
+&lt;h2 id=&quot;scaffolding&quot;&gt;Scaffolding&lt;/h2&gt;
+&lt;p&gt;How Ramme is organized and what the various files are. All posts, layouts, includes, stylesheets, assets, and whatever else is grouped nicely under the root folder.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;├── 404.html                                    # 404 page
+├── about                                       # About Page
+├── assets
+│   ├── css                                     # Compiled stylesheets
+│   ├── fonts                                   # webfonts
+│   ├── img                                     # Folder for images
+│   │   ├── favicon                             # Folder for favicons
+│   └── js                                      # Folder for scripts
+├── blog                                        # Post list for blog
+├── _config.yml                                 # Configuration file for jekyll
+├── _data
+│   └── navigation.yml                          # Navigation links
+├── _includes
+│   ├── favicon.html                            # Favicon links
+│   ├── footer-home.html                        # Footer for home page
+│   ├── footer.html                             # Footer for other pages
+│   ├── head-home.html                          # Head for home page
+│   ├── head.html                               # Head for other pages
+│   ├── nav-home.html                           # Top navigation for home page
+│   ├── nav.html                                # Top navigation for other pages
+│   ├── open-graph.html                         # Twitter Cards and Open Graph meta data
+│   ├── scripts.html                            # Site scripts
+│   ├── social-links.html                       # Social links to show in homepage
+│   └── toc.html                                # Table of contents to use in some posts
+├── index.html                                  # Homepage
+├── _layouts
+│   ├── home.html                               # Home layout
+│   ├── page.html                               # Page layout
+│   ├── post.html                               # Post layout
+│   ├── post-index.html                         # Post list layout
+│   └── project.html                            # Project list layout
+├── _posts                                      # MarkDown formatted posts
+├── _sass                                       # Sass stylesheets
+└── projects                                    # Projects list page&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;site-setup&quot;&gt;Site Setup&lt;/h2&gt;
+&lt;p&gt;A quick checklist of the files you’ll want to edit to get up and running.&lt;/p&gt;
+
+&lt;h3 id=&quot;site-wide-configuration&quot;&gt;Site Wide Configuration&lt;/h3&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt; is your friend. Open it up and personalize it. Most variables are self explanatory but here’s an explanation of each if needed:&lt;/p&gt;
+
+&lt;h4 id=&quot;title&quot;&gt;title&lt;/h4&gt;
+
+&lt;p&gt;The title of your site… shocker!&lt;/p&gt;
+
+&lt;p&gt;Example &lt;code class=&quot;highlighter-rouge&quot;&gt;title: My Awesome Site&lt;/code&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;url&quot;&gt;url&lt;/h4&gt;
+
+&lt;p&gt;Used to generate absolute urls in &lt;code class=&quot;highlighter-rouge&quot;&gt;sitemap.xml&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;feed.xml&lt;/code&gt;, and for generating canonical URLs in &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;head&amp;gt;&lt;/code&gt;. When developing locally either comment this out or use something like &lt;code class=&quot;highlighter-rouge&quot;&gt;http://localhost:4000&lt;/code&gt; so all assets load properly. &lt;em&gt;Don’t include a trailing &lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt;&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Examples:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://taylantatli.me/Ramme&lt;/span&gt;
+&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://localhost:4000&lt;/span&gt;
+&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;//cooldude.github.io&lt;/span&gt;
+&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h4 id=&quot;google-analytics-and-webmaster-tools&quot;&gt;Google Analytics and Webmaster Tools&lt;/h4&gt;
+
+&lt;p&gt;Google Analytics UA and Webmaster Tool verification tags can be entered in &lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt;. For more information on obtaining these meta tags check &lt;a href=&quot;http://support.google.com/webmasters/bin/answer.py?hl=en&amp;amp;answer=35179&quot;&gt;Google Webmaster Tools&lt;/a&gt; and &lt;a href=&quot;https://ssl.bing.com/webmaster/configure/verify/ownership&quot;&gt;Bing Webmaster Tools&lt;/a&gt; support.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;navigation-links&quot;&gt;Navigation Links&lt;/h3&gt;
+
+&lt;p&gt;To set what links appear in the top navigation edit &lt;code class=&quot;highlighter-rouge&quot;&gt;_data/navigation.yml&lt;/code&gt;. Use the following format to set the URL and title for as many links as you’d like. &lt;em&gt;External links will open in a new window.&lt;/em&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Home&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Blog&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/blog/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Projects&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/projects/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;About&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/about/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Ramme&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://taylantatli.me/Ramme&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;layouts-and-content&quot;&gt;Layouts and Content&lt;/h2&gt;
+
+&lt;p&gt;Explanations of the various &lt;code class=&quot;highlighter-rouge&quot;&gt;_layouts&lt;/code&gt; included with the theme and when to use them.&lt;/p&gt;
+
+&lt;h3 id=&quot;post-and-page&quot;&gt;Post and Page&lt;/h3&gt;
+
+&lt;p&gt;These two layouts are almost similar. Only difference is page layout doesn’t show date under title.&lt;/p&gt;
+
+&lt;h3 id=&quot;post-index-page&quot;&gt;Post Index Page&lt;/h3&gt;
+
+&lt;p&gt;A &lt;a href=&quot;http://localhost:4000/blog/&quot;&gt;sample index page&lt;/a&gt; listing all blog posts. The name can be customized to your liking by editing a few references. For example, to change &lt;strong&gt;Blog&lt;/strong&gt; to &lt;strong&gt;Posts&lt;/strong&gt; update the following:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;In &lt;code class=&quot;highlighter-rouge&quot;&gt;_data/navigation.yml&lt;/code&gt;: rename the title and URL to the following:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;  &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Posts&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/posts/&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Rename &lt;code class=&quot;highlighter-rouge&quot;&gt;blog/index.md&lt;/code&gt; to &lt;code class=&quot;highlighter-rouge&quot;&gt;posts/index.md&lt;/code&gt; and update the YAML front matter accordingly.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;thumbnails-for-og-and-twitter-cards&quot;&gt;Thumbnails for OG and Twitter Cards&lt;/h3&gt;
+
+&lt;p&gt;Site logo is used by &lt;a href=&quot;https://developers.facebook.com/docs/opengraph/&quot;&gt;Open Graph&lt;/a&gt; and &lt;a href=&quot;https://dev.twitter.com/docs/cards&quot;&gt;Twitter Cards&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p class=&quot;notice&quot;&gt;&lt;strong&gt;Pro-Tip&lt;/strong&gt;: You need to &lt;a href=&quot;https://dev.twitter.com/docs/cards&quot;&gt;apply for Twitter Cards&lt;/a&gt; before they will begin showing up when links to your site are shared.&lt;/p&gt;
+
+&lt;h3 id=&quot;kramdown-table-of-contents&quot;&gt;Kramdown Table of Contents&lt;/h3&gt;
+
+&lt;p&gt;To include an auto-generated &lt;strong&gt;table of contents&lt;/strong&gt; for posts and pages, add the following &lt;code class=&quot;highlighter-rouge&quot;&gt;_include&lt;/code&gt; before the actual content. &lt;a href=&quot;http://kramdown.rubyforge.org/converter/html.html#toc&quot;&gt;Kramdown will take care of the rest&lt;/a&gt; and convert all headlines into list of links.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;listi&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;questions&quot;&gt;Questions?&lt;/h2&gt;
+
+&lt;p&gt;Found a bug or aren’t quite sure how something works? By all means &lt;a href=&quot;https://github.com/TaylanTatli/Ramme/issues/new&quot;&gt;file a GitHub Issue&lt;/a&gt;. And if you make something cool with this theme feel free to let me know.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;license&quot;&gt;License&lt;/h2&gt;
+
+&lt;p&gt;This theme is free and open source software, distributed under the MIT License. So feel free to use this Jekyll theme on your site without linking back to me or including a disclaimer.&lt;/p&gt;
+</description>
+        <pubDate>Mon, 21 Mar 2016 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/03/ramme-theme/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/03/ramme-theme/</guid>
+        
+        <category>jekyll</category>
+        
+        <category>ramme</category>
+        
+        <category>blog</category>
+        
+        <category>about</category>
+        
+        <category>theme</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>Markdown Syntax</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;h2 id=&quot;html-elements&quot;&gt;HTML Elements&lt;/h2&gt;
+
+&lt;p&gt;Below is just about everything you’ll need to style in the theme. Check the source code to see the many embedded elements within paragraphs.&lt;/p&gt;
+
+&lt;h1 id=&quot;heading-1&quot;&gt;Heading 1&lt;/h1&gt;
+
+&lt;h2 id=&quot;heading-2&quot;&gt;Heading 2&lt;/h2&gt;
+
+&lt;h3 id=&quot;heading-3&quot;&gt;Heading 3&lt;/h3&gt;
+
+&lt;h4 id=&quot;heading-4&quot;&gt;Heading 4&lt;/h4&gt;
+
+&lt;h5 id=&quot;heading-5&quot;&gt;Heading 5&lt;/h5&gt;
+
+&lt;h6 id=&quot;heading-6&quot;&gt;Heading 6&lt;/h6&gt;
+
+&lt;h3 id=&quot;body-text&quot;&gt;Body text&lt;/h3&gt;
+
+&lt;p&gt;Lorem ipsum dolor sit amet, test link adipiscing elit. &lt;strong&gt;This is strong&lt;/strong&gt;. Nullam dignissim convallis est. Quisque aliquam.&lt;/p&gt;
+
+&lt;p class=&quot;image-pull-right&quot;&gt;&lt;img src=&quot;https://mmistakes.github.io/minimal-mistakes/images/3953273590_704e3899d5_m.jpg&quot; alt=&quot;Smithsonian Image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;This is emphasized&lt;/em&gt;. Donec faucibus. Nunc iaculis suscipit dui. 53 = 125. Water is H2O. Nam sit amet sem. Aliquam libero nisi, imperdiet at, tincidunt nec, gravida vehicula, nisl. The New York Times (That’s a citation). Underline.Maecenas ornare tortor. Donec sed tellus eget sapien fringilla nonummy. Mauris a ante. Suspendisse quam sem, consequat at, commodo vitae, feugiat in, nunc. Morbi imperdiet augue quis tellus.&lt;/p&gt;
+
+&lt;p&gt;HTML and CSS are our tools. Mauris a ante. Suspendisse quam sem, consequat at, commodo vitae, feugiat in, nunc. Morbi imperdiet augue quis tellus. Praesent mattis, massa quis luctus fermentum, turpis mi volutpat justo, eu volutpat enim diam eget metus.&lt;/p&gt;
+
+&lt;h3 id=&quot;blockquotes&quot;&gt;Blockquotes&lt;/h3&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Lorem ipsum dolor sit amet, test link adipiscing elit. Nullam dignissim convallis est. Quisque aliquam.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;list-types&quot;&gt;List Types&lt;/h2&gt;
+
+&lt;h3 id=&quot;ordered-lists&quot;&gt;Ordered Lists&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Item one
+    &lt;ol&gt;
+      &lt;li&gt;sub item one&lt;/li&gt;
+      &lt;li&gt;sub item two&lt;/li&gt;
+      &lt;li&gt;sub item three&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Item two&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;unordered-lists&quot;&gt;Unordered Lists&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Item one&lt;/li&gt;
+  &lt;li&gt;Item two&lt;/li&gt;
+  &lt;li&gt;Item three&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;tables&quot;&gt;Tables&lt;/h2&gt;
+
+&lt;table rules=&quot;groups&quot;&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Header1&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Header2&lt;/th&gt;
+      &lt;th style=&quot;text-align: right&quot;&gt;Header3&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell2&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell3&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell4&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell5&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell6&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell2&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell3&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell4&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell5&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell6&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tfoot&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;Foot1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Foot2&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;Foot3&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tfoot&gt;
+&lt;/table&gt;
+
+&lt;h2 id=&quot;code-snippets&quot;&gt;Code Snippets&lt;/h2&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-css&quot; data-lang=&quot;css&quot;&gt;&lt;span class=&quot;nf&quot;&gt;#container&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nl&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;left&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;nl&quot;&gt;margin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;-240px&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;nl&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100%&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h2 id=&quot;buttons&quot;&gt;Buttons&lt;/h2&gt;
+
+&lt;p&gt;Make any link standout more when applying the &lt;code class=&quot;highlighter-rouge&quot;&gt;.btn&lt;/code&gt; class.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;a&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;href=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;#&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;btn btn-success&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Success Button&lt;span class=&quot;nt&quot;&gt;&amp;lt;/a&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn&quot;&gt;Primary Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-success&quot;&gt;Success Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-warning&quot;&gt;Warning Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-danger&quot;&gt;Danger Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-info&quot;&gt;Info Button&lt;/a&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;notices&quot;&gt;Notices&lt;/h2&gt;
+
+&lt;p class=&quot;notice&quot;&gt;&lt;strong&gt;Watch out!&lt;/strong&gt; You can also add notices by appending &lt;code class=&quot;highlighter-rouge&quot;&gt;{: .notice}&lt;/code&gt; to a paragraph.&lt;/p&gt;
+</description>
+        <pubDate>Tue, 15 Mar 2016 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2016/03/markdown-syntax/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/03/markdown-syntax/</guid>
+        
+        <category>markdown</category>
+        
+        <category>syntax</category>
+        
+        <category>sample</category>
+        
+        <category>test</category>
+        
+        <category>jekyll</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>套接字编程简介（笔记）</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[8:26 PM]&lt;/p&gt;
+
+&lt;h2 id=&quot;前言&quot;&gt;前言&lt;/h2&gt;
+
+&lt;p&gt;网络编程-&amp;gt;套接字-&amp;gt;套接字地址结构。
+套接字地址结构可以在两个方向上传递：从进程到内核、从内核到进程！&lt;/p&gt;
+
+&lt;h2 id=&quot;套接字结构&quot;&gt;套接字结构&lt;/h2&gt;
+
+&lt;p&gt;以Windows作为实例，看看套接字的结构：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
+ * Socket address, internet style.
+ */
+struct sockaddr_in {
+        short   sin_family;
+        u_short sin_port;
+        struct  in_addr sin_addr;
+        char    sin_zero[8];
+};
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;注意：&lt;/strong&gt;
+套接字地址结构仅在给定主机上使用，虽然结构中的某些字段（例如IP地址和端口号）用在不用主机之间的通信中，但是结构本身并不在主机之间传递！&lt;/p&gt;
+
+&lt;p&gt;**当作为一个参数传递进任何套接字函数时，套接字地址结构总是以引用形式（也就是以指向该结构的指针）来传递，然而以这样的指针作为参数之一的任何套接字函数必须处理来自所支持的任何协议族的套接字地址结构
+在如何声明所传递指针的数据类型上存在一个问题？
+解决的方法：定义一个通用的套接字数据结构！&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Ret = bind(ServerSocket, (struct sockaddr*)&amp;amp;LocalAddr, sizeof(LocalAddr));
+```**
+
+![](file:///C:\Users\wyc\Desktop\MD文件夹\IPV4.png)
+             图一 套接字结构图！
+
+## 套接字传递方向
+
+ |从进程空间到内核空间  | 从内核空间到进程空间
+-------------------|-------------------
+函数 | bind 、connect 、sendto | accept 、 recvfrom 、 getsockname 、 getpeername
+图示| ![](file:///C:\Users\wyc\Desktop\MD文件夹\ProToKne.PNG)|![](file:///C:\Users\wyc\Desktop\MD文件夹\KneToPro.PNG)
+
+## 操作套接字结构的函数
+
+使用inet_addr函数（返回值为32位的网络字节序二进制值）易于出现的问题：
+1.所有的2^3个可能的二进制都是有效的IP地址（0.0.0.0到255.255.255.255），但是当出错时该函数返回INADDR_NONE常值（通常是一个32位均为1的值），这意味着点分十进制数（255.255.255.255）不能由该函数处理。因为其的二进制值被用于指示函数失败。
+
+**改用inet_aton函数！**
+
+对结果进行静态存储导致该函数不可重入且非线程安全！！！！！！！！
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;ssize_t Readn(int fd, void *vptr, size_t n)
+{
+    size_t nleft;
+    ssize_t nread;
+    char *ptr;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ptr = vptr;
+nleft = n;
+while( nleft &amp;gt; 0 )
+{
+     if( ( nread = read(fd,ptr,nleft ) ) &amp;lt; 0 )
+     {
+          if( errno == EINTR )
+              nread = 0;
+          else
+              return -1;
+     }
+     else if( nread == 0 )
+          break;
+     
+     nleft -= nread;
+     ptr += nread;
+}
+return ( n - nleft ); } ```
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;套接字地址结构是每一个网络程序的重要组成部分，分配它们，填写它们，把指向它们的指针传递给各个套接字函数。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;TCP套接字为应用进程提供一个字节流，它们没有记录标记，从TCP套接字read的返回值可能比我们请求的数量少，但是这不表示发生错误。对于文本行交互的应用来说，程序应该按照操作缓冲区而非按照操作文本行来编写。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;基本tcp套接字编程&quot;&gt;基本TCP套接字编程&lt;/h2&gt;
+
+&lt;p&gt;下图给出TCP客户端和服务段进程之间发生的一些典型事件的时间表！&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\套接字的时间表.PNG&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;注意：
+1.客户在调用connect前不必非得调用bind函数，因为如果需要的话，内核会确定源IP地址，big选择一个临时端口作为源端口。&lt;/p&gt;
+
+&lt;p&gt;2、按照&lt;strong&gt;TCP状态转换图（图2-4 原书中！）&lt;/strong&gt;，connect函数导致当前套接字从CLOSED状态（该套接字自从由socket函数创建以来一直所处的状态）转移到SYN_SENT状态，若成功再转移到ESTABLISHED状态，若connect失败则该套接字不再可用，必须关闭，我们不能对这样的套接字再次调用connect函数。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\bind.PNG&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;可以通过使用GetEnv函数获取环境变量，来改变程序运行轨迹！！！！！！！！&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;并发服务器的编程框架&quot;&gt;并发服务器的编程框架&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;pid_t pid
+int listenfd, connfd
+listenfd = socket();
+Bind(listenfd,...)
+for(;;)
+{
+	connfd = Accept(listenfd,...)
+    if( ( pid = for() ) == 0 )
+    {
+    	close(linsenfd);
+        doit(connfd);
+        close(connfd);
+    }
+    close(connfd);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+</description>
+        <pubDate>Sat, 25 Jul 2015 20:26:00 +0800</pubDate>
+        <link>http://localhost:4000/2015/07/%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E7%AE%80%E4%BB%8B(%E7%AC%94%E8%AE%B0)/</link>
+        <guid isPermaLink="true">http://localhost:4000/2015/07/%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E7%AE%80%E4%BB%8B(%E7%AC%94%E8%AE%B0)/</guid>
+        
+        <category>windows</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>认识coff文件格式</title>
+        <description>&lt;p&gt;listi&lt;/p&gt;
+
+&lt;p&gt;[9:54 PM]&lt;/p&gt;
+
+&lt;h2 id=&quot;前言&quot;&gt;前言&lt;/h2&gt;
+&lt;p&gt;经常编译代码，运行代码，修改Bug,也会遇到各种问题，而且有时更多与编译、链接相关的问题，因此，就想了解一下最基本的编译、链接的原理。（平台为windows7和VS2010）&lt;/p&gt;
+
+&lt;h2 id=&quot;编译&quot;&gt;编译&lt;/h2&gt;
+&lt;p&gt;先了解编译出来的东东，而且使用的cmd编译命令，而不是IDE，因为使用IDE就无法知道中间过程了。先上码。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int printf( const char *format,...);
+
+int global_int_val = 84;
+int global_uninit_var;
+
+void func1(int i)
+{
+    printf(&quot;%d\n&quot;,i);
+}
+
+int main(void)
+{
+    static int static_var = 85;
+    static int static_var2;
+    int a = 1;
+    int b;
+    
+    func1( static_var + static_var2+ a + b );
+    
+    return a;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;在VS控制台的命令，&lt;strong&gt;cl /c /Za SimpleSection.c&lt;/strong&gt;，产生的文件为&lt;strong&gt;SimpleSection.obj&lt;/strong&gt;，打开后就是一大堆二进制的数据。用 &lt;strong&gt;dumpbin&lt;/strong&gt;工具进行查看，命令&lt;strong&gt;dumpbin /ALL SimpleSection.obj &amp;gt; SimpleSection.txt&lt;/strong&gt;,产生的结果如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Microsoft (R) COFF/PE Dumper Version 10.00.30319.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file SimpleSection.obj
+
+File Type: COFF OBJECT
+
+FILE HEADER VALUES
+             14C machine (x86)
+               5 number of sections
+        55B240DA time date stamp Fri Jul 24 21:42:50 2015
+             1F0 file pointer to symbol table
+              14 number of symbols
+               0 size of optional header
+               0 characteristics
+
+SECTION HEADER #1
+.drectve name
+       0 physical address
+       0 virtual address
+      18 size of raw data
+      DC file pointer to raw data (000000DC to 000000F3)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+  100A00 flags
+         Info
+         Remove
+         1 byte align
+
+RAW DATA #1
+  00000000: 20 20 20 2F 44 45 46 41 55 4C 54 4C 49 42 3A 22     /DEFAULTLIB:&quot;
+  00000010: 4C 49 42 43 4D 54 22 20                          LIBCMT&quot; 
+
+   Linker Directives
+   -----------------
+   /DEFAULTLIB:&quot;LIBCMT&quot;
+
+SECTION HEADER #2
+.debug$S name
+       0 physical address
+       0 virtual address
+      70 size of raw data
+      F4 file pointer to raw data (000000F4 to 00000163)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+42100040 flags
+         Initialized Data
+         Discardable
+         1 byte align
+         Read Only
+
+RAW DATA #2
+  00000000: 04 00 00 00 F1 00 00 00 61 00 00 00 23 00 01 11  ....?...a...#...
+  00000010: 00 00 00 00 45 3A 5C 50 72 6F 67 72 61 6D 5C 53  ....E:\Program\S
+  00000020: 69 6D 70 6C 65 53 65 63 74 69 6F 6E 2E 6F 62 6A  impleSection.obj
+  00000030: 00 3A 00 3C 11 00 22 00 00 07 00 10 00 00 00 6F  .:.&amp;lt;..&quot;........o
+  00000040: 76 01 00 10 00 00 00 6F 76 01 00 4D 69 63 72 6F  v......ov..Micro
+  00000050: 73 6F 66 74 20 28 52 29 20 4F 70 74 69 6D 69 7A  soft (R) Optimiz
+  00000060: 69 6E 67 20 43 6F 6D 70 69 6C 65 72 00 00 00 00  ing Compiler....
+
+SECTION HEADER #3
+   .data name
+       0 physical address
+       0 virtual address
+       C size of raw data
+     164 file pointer to raw data (00000164 to 0000016F)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300040 flags
+         Initialized Data
+         4 byte align
+         Read Write
+
+RAW DATA #3
+  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
+
+SECTION HEADER #4
+   .text name
+       0 physical address
+       0 virtual address
+      4E size of raw data
+     170 file pointer to raw data (00000170 to 000001BD)
+     1BE file pointer to relocation table
+       0 file pointer to line numbers
+       5 number of relocations
+       0 number of line numbers
+60500020 flags
+         Code
+         16 byte align
+         Execute Read
+
+RAW DATA #4
+  00000000: 55 8B EC 8B 45 08 50 68 00 00 00 00 E8 00 00 00  U.ì.E.Ph....è...
+  00000010: 00 83 C4 08 5D C3 CC CC CC CC CC CC CC CC CC CC  ..?.]?ìììììììììì
+  00000020: 55 8B EC 83 EC 08 C7 45 FC 01 00 00 00 A1 00 00  U.ì.ì.?Eü....?..
+  00000030: 00 00 03 05 00 00 00 00 03 45 FC 03 45 F8 50 E8  .........Eü.E?Pè
+  00000040: 00 00 00 00 83 C4 04 8B 45 FC 8B E5 5D C3        .....?..Eü.?]?
+
+RELOCATIONS #4
+                                                Symbol    Symbol
+ Offset    Type              Applied To         Index     Name
+ --------  ----------------  -----------------  --------  ------
+ 00000008  DIR32                      00000000         A  $SG893
+ 0000000D  REL32                      00000000         F  _printf
+ 0000002E  DIR32                      00000000         B  ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+ 00000034  DIR32                      00000000        13  ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+ 00000040  REL32                      00000000         E  _func1
+
+SECTION HEADER #5
+    .bss name
+       0 physical address
+       0 virtual address
+       4 size of raw data
+       0 file pointer to raw data
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300080 flags
+         Uninitialized Data
+         4 byte align
+         Read Write
+
+COFF SYMBOL TABLE
+000 00AA766F ABS    notype       Static       | @comp.id
+001 00000001 ABS    notype       Static       | @feat.00
+002 00000000 SECT1  notype       Static       | .drectve
+    Section length   18, #relocs    0, #linenums    0, checksum        0
+004 00000000 SECT2  notype       Static       | .debug$S
+    Section length   70, #relocs    0, #linenums    0, checksum        0
+006 00000004 UNDEF  notype       External     | _global_uninit_var
+007 00000000 SECT3  notype       Static       | .data
+    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
+009 00000000 SECT3  notype       External     | _global_int_val
+00A 00000004 SECT3  notype       Static       | $SG893
+00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+00C 00000000 SECT4  notype       Static       | .text
+    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
+00E 00000000 SECT4  notype ()    External     | _func1
+00F 00000000 UNDEF  notype ()    External     | _printf
+010 00000020 SECT4  notype ()    External     | _main
+011 00000000 SECT5  notype       Static       | .bss
+    Section length    4, #relocs    0, #linenums    0, checksum        0
+013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+
+String Table Size = 0x5C bytes
+
+  Summary
+
+           4 .bss
+           C .data
+          70 .debug$S
+          18 .drectve
+          4E .text
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;coff的文件格式&quot;&gt;COFF的文件格式&lt;/h2&gt;
+
+&lt;p&gt;其实从上面的结果比较让人不解，所以需要了解一下COFF文件的格式，这样的话，在回头看的时候，就比较非常容易的理解了。&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Image Header  IMAGE_FILE_HEADER&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Section Tabel IMAGE_SECTION_HEADER[]&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.text&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.data&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.drectve&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.debug$S&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;…&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Symbol Table&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;把上面的结果进行分割，以便更好的理解，COFF格式！&lt;/p&gt;
+
+&lt;h3 id=&quot;image-header&quot;&gt;Image Header&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;File Type: COFF OBJECT    ---&amp;gt; 文件类型
+
+FILE HEADER VALUES
+             14C machine (x86) --&amp;gt; 目标机器类型 微软定义14C表示X86
+               5 number of sections --&amp;gt; 段的数量
+        55B240DA time date stamp Fri Jul 24 21:42:50 2015 --&amp;gt;创建时间
+             1F0 file pointer to symbol table --&amp;gt;符号表在PE中的位置
+              14 number of symbols ---&amp;gt;符号数量
+               0 size of optional header ----&amp;gt; OptionalHeader的大小，不存在为0
+               0 characteristics
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;section-tabe&quot;&gt;Section Tabe&lt;/h3&gt;
+
+&lt;p&gt;COFF文件的段表，它是一个类型为“IMAGE_SECTION_HEADER”结构的数组，数组里面每一个元素代表一个段。这个数组的元素与该文件包含的段的数量是一致。可以查看一下IMAGE_SECTION_HEADER，就可以与下面的内容对应上了。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;SECTION HEADER #3
+   .data name
+       0 physical address
+       0 virtual address
+       C size of raw data
+     164 file pointer to raw data (00000164 to 0000016F)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300040 flags
+         Initialized Data
+         4 byte align
+         Read Write
+
+RAW DATA #3
+  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;symboltable&quot;&gt;Symboltable&lt;/h3&gt;
+
+&lt;p&gt;最后的面的是COFF符号表&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;COFF SYMBOL TABLE
+000 00AA766F ABS    notype       Static       | @comp.id
+001 00000001 ABS    notype       Static       | @feat.00
+002 00000000 SECT1  notype       Static       | .drectve
+    Section length   18, #relocs    0, #linenums    0, checksum        0
+004 00000000 SECT2  notype       Static       | .debug$S
+    Section length   70, #relocs    0, #linenums    0, checksum        0
+006 00000004 UNDEF  notype       External     | _global_uninit_var
+007 00000000 SECT3  notype       Static       | .data
+    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
+009 00000000 SECT3  notype       External     | _global_int_val
+00A 00000004 SECT3  notype       Static       | $SG893
+00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+00C 00000000 SECT4  notype       Static       | .text
+    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
+00E 00000000 SECT4  notype ()    External     | _func1
+00F 00000000 UNDEF  notype ()    External     | _printf
+010 00000020 SECT4  notype ()    External     | _main
+011 00000000 SECT5  notype       Static       | .bss
+    Section length    4, #relocs    0, #linenums    0, checksum        0
+013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;第一列为符号的编号，即符号在符号表中的下表。&lt;/p&gt;
+
+&lt;p&gt;第二列为符号的大小，即符号所表示的对象所占用的空间。&lt;/p&gt;
+
+&lt;p&gt;第三列为符号所在的位置，ABS表示不存在任何一段中，SECT1表示在本文件第一段中。UNDEF表示未定义的。&lt;/p&gt;
+
+&lt;p&gt;第四列为符号的类型，notype为变量，notype()表示函数，只有两种类型。&lt;/p&gt;
+
+&lt;p&gt;第五列为符号的可见范围，static为局部变量，External为全局变量。&lt;/p&gt;
+
+&lt;p&gt;第六列为符号的符号名。&lt;/p&gt;
+</description>
+        <pubDate>Fri, 24 Jul 2015 21:54:00 +0800</pubDate>
+        <link>http://localhost:4000/2015/07/%E8%AE%A4%E8%AF%86Coff%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/</link>
+        <guid isPermaLink="true">http://localhost:4000/2015/07/%E8%AE%A4%E8%AF%86Coff%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/</guid>
+        
+        <category>windows</category>
+        
+        
+      </item>
+    
+  </channel>
+</rss>

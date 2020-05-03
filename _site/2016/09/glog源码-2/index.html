@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <title>glog源码（2）</title>
+  <meta name="description" content="listi">
+  <meta name="author" content="leopardpan">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="glog源码（2）">
+  <meta name="twitter:description" content="listi">
+  
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="glog源码（2）">
+  <meta property="og:description" content="listi">
+  
+  <link rel="icon" type="image/png" href="/images/favicon.png" />
+  <link href="/images/favicon.png" rel="shortcut icon" type="image/png">
+  
+  <link rel="stylesheet" href="/css/main.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="canonical" href="http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81-2/">
+  <link rel="alternate" type="application/rss+xml" title="wuyuchun" href="http://localhost:4000/feed.xml">
+  
+  <meta name="google-site-verification" content="1-1ZlHoRvM0T2FqPbW2S-qLgYXN6rsn52kErlMPd_gw" />
+
+<!-- 站点统计 -->
+  <script 
+  async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js">
+  </script>  
+
+<!-- 百度统计 -->
+  
+  <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "//hm.baidu.com/hm.js?xxxx";
+        var s = document.getElementsByTagName("script")[0]; 
+        s.parentNode.insertBefore(hm, s);
+      })();
+  </script>
+  
+
+<!-- google 统计 -->
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      ga('create', 'xxxx', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-9005224472374751",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+
+  <body>
+
+    <span class="mobile btn-mobile-menu">        
+      <div class="nav_container">
+         <nav class="nav-menu-item" style = "float:right">
+            <i class="nav-menu-item">
+              <a href="/#blog" title="" class="blog-button">  博客主页
+              </a>
+            </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/archive" title="archive" class="btn-mobile-menu__icon">
+                      所有文章
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/tags" title="tags" class="btn-mobile-menu__icon">
+                      标签
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/about" title="about" class="btn-mobile-menu__icon">
+                      关于我
+                  </a>
+                </i>
+            
+          </nav>
+      </div>
+    </span>
+    
+    <header class="panel-cover panel-cover--collapsed" style="background-image: url('/images/background-cover.jpg')">
+  <div class="panel-main">
+
+    <div class="panel-main__inner panel-inverted">
+    <div class="panel-main__content">
+        <!-- 头像效果-start -->
+        <div class="ih-item circle effect right_to_left">            
+            <a href="/#blog" title="前往 wuyuchun 的主页" class="blog-button">
+                <div class="img"><img src="/images/avatar.jpg" alt="img"></div>
+                <div class="info">
+                    <div class="info-back">
+                        <h2> 
+                            
+                                messi
+                            
+                        </h2>
+                        <p>
+                           
+                                机器学习/ 优化师
+                            
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- 头像效果-end -->
+        <h1 class="panel-cover__title panel-title"><a href="/#blog" title="link to homepage for wuyuchun" class="blog-button">wuyuchun</a></h1>
+        
+        <span class="panel-cover__subtitle panel-subtitle">个人站</span>
+        
+        <hr class="panel-cover__divider" />
+        <p class="panel-cover__description">欢迎来到我的个人站~</p>
+        <hr class="panel-cover__divider panel-cover__divider--secondary" />
+        
+        
+        
+
+        <div class="navigation-wrapper">
+          <div>
+            <nav class="cover-navigation cover-navigation--primary">
+              <ul class="navigation">
+                <li class="navigation__item"><a href="/#blog" title="" class="blog-button">博客主页</a></li>
+                
+                  <li class="navigation__item"><a href="/archive" title="archive">所有文章</a></li>
+                
+                  <li class="navigation__item"><a href="/tags" title="tags">标签</a></li>
+                
+                  <li class="navigation__item"><a href="/about" title="about">关于我</a></li>
+                
+              </ul>
+            </nav>
+          </div>          
+        </div>
+
+
+        </div>
+      </div>
+    </div>
+    
+    
+    <div class="panel-cover--overlay cover-clear"></div>
+    
+  </div>
+</header>
+
+
+    <div class="content-wrapper">
+        <div class="content-wrapper__inner">
+            <article class="post-container post-container--single" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title">glog源码（2）</h1>
+    <div class="post-meta">
+      <img src="/images/calendar.png" width="20px"/> 
+      <time datetime="2016-09-10 15:40:00 +0800" itemprop="datePublished" class="post-meta__date date">2016-09-10</time>  
+         
+      <span id="busuanzi_container_page_pv"> | 阅读：<span id="busuanzi_value_page_pv"></span>次</span>
+    </p>
+    </div>
+  </header>
+
+  <section class="post">
+    <p>listi</p>
+
+<p>[15:40 ]</p>
+
+<h1 id="前言">前言</h1>
+<p>前面大概讲解一下glog的关键类，下面将会针对与LogMessage类。以下代码由于glog进行裁剪过来的。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//用于输出消息，当写满消息后，调用析构函数，使用Flush
+class GOOGLE_GLOG_DLL_DECL LogMessage {
+public:
+  enum {
+    kNoLogPrefix = -1
+  };
+
+  class GOOGLE_GLOG_DLL_DECL LogStream : public std::ostream {
+
+  public:
+    LogStream(char *buf, int len, int ctr)
+        : std::ostream(NULL),
+          streambuf_(buf, len),
+          ctr_(ctr),
+          self_(this) {
+      rdbuf(&amp;streambuf_);
+    }
+
+    int ctr() const { return ctr_; }
+    void set_ctr(int ctr) { ctr_ = ctr; }
+    LogStream* self() const { return self_; }
+
+    // Legacy std::streambuf methods.
+    size_t pcount() const { return streambuf_.pcount(); }
+    char* pbase() const { return streambuf_.pbase(); }
+    char* str() const { return pbase(); }
+
+  private:
+    LogStream(const LogStream&amp;);  //！对象语义 而不是值语义
+    LogStream&amp; operator=(const LogStream&amp;); //！对象语义 而不是值语义
+    base_logging::LogStreamBuf streambuf_;
+    int ctr_;  // Counter hack (for the LOG_EVERY_X() macro)
+    LogStream *self_;  // Consistency check hack
+  };
+
+public:
+  // icc 8 requires this typedef to avoid an internal compiler error.
+  typedef void (LogMessage::*SendMethod)();
+
+  LogMessage(const char* file, int line, LogSeverity severity, int ctr,
+             SendMethod send_method);
+
+  // Two special constructors that generate reduced amounts of code at
+  // LOG call sites for common cases.
+
+  // Used for LOG(INFO): Implied are:
+  // severity = INFO, ctr = 0, send_method = &amp;LogMessage::SendToLog.
+  //
+  // Using this constructor instead of the more complex constructor above
+  // saves 19 bytes per call site.
+  LogMessage(const char* file, int line);
+
+  // Used for LOG(severity) where severity != INFO.  Implied
+  // are: ctr = 0, send_method = &amp;LogMessage::SendToLog
+  //
+  // Using this constructor instead of the more complex constructor above
+  // saves 17 bytes per call site.
+  LogMessage(const char* file, int line, LogSeverity severity);
+
+  // Constructor to log this message to a specified sink (if not NULL).
+  // Implied are: ctr = 0, send_method = &amp;LogMessage::SendToSinkAndLog if
+  // also_send_to_log is true, send_method = &amp;LogMessage::SendToSink otherwise.
+  LogMessage(const char* file, int line, LogSeverity severity, LogSink* sink,
+             bool also_send_to_log);
+
+  // Constructor where we also give a vector&lt;string&gt; pointer
+  // for storing the messages (if the pointer is not NULL).
+  // Implied are: ctr = 0, send_method = &amp;LogMessage::SaveOrSendToLog.
+  LogMessage(const char* file, int line, LogSeverity severity,
+             std::vector&lt;std::string&gt;* outvec);
+
+  // Constructor where we also give a string pointer for storing the
+  // message (if the pointer is not NULL).  Implied are: ctr = 0,
+  // send_method = &amp;LogMessage::WriteToStringAndLog.
+  LogMessage(const char* file, int line, LogSeverity severity,
+             std::string* message);
+
+  // A special constructor used for check failures
+  LogMessage(const char* file, int line, const CheckOpString&amp; result);
+
+  ~LogMessage();
+
+  // Flush a buffered message to the sink set in the constructor.  Always
+  // called by the destructor, it may also be called from elsewhere if
+  // needed.  Only the first call is actioned; any later ones are ignored.
+  void Flush();
+
+  // An arbitrary limit on the length of a single log message.  This
+  // is so that streaming can be done more efficiently.
+  static const size_t kMaxLogMessageLen;
+
+  // Theses should not be called directly outside of logging.*,
+  // only passed as SendMethod arguments to other LogMessage methods:
+  void SendToLog();  // Actually dispatch to the logs
+  void SendToSyslogAndLog();  // Actually dispatch to syslog and the logs
+
+  // Call abort() or similar to perform LOG(FATAL) crash.
+  static void  Fail();
+
+  std::ostream&amp; stream();
+
+  int preserved_errno() const;
+
+  // Must be called without the log_mutex held.  (L &lt; log_mutex)
+  static int64 num_messages(int severity);
+
+  struct LogMessageData;
+
+private:
+  // Fully internal SendMethod cases:
+  void SendToSinkAndLog();  // Send to sink if provided and dispatch to the logs
+  void SendToSink();  // Send to sink if provided, do nothing otherwise.
+
+  // Write to string if provided and dispatch to the logs.
+  void WriteToStringAndLog();
+
+  void SaveOrSendToLog();  // Save to stringvec if provided, else to logs
+
+  void Init(const char* file, int line, LogSeverity severity,
+            void (LogMessage::*send_method)());
+
+  // Used to fill in crash information during LOG(FATAL) failures.
+  void RecordCrashReason(glog_internal_namespace_::CrashReason* reason);
+
+  // Counts of messages sent at each priority:
+  static int64 num_messages_[NUM_SEVERITIES];  // under log_mutex
+
+  // We keep the data in a separate struct so that each instance of
+  // LogMessage uses less stack space.
+  LogMessageData* allocated_;
+  LogMessageData* data_;
+
+  friend class LogDestination;
+
+  LogMessage(const LogMessage&amp;); //！对象语义 而不是值语义
+  void operator=(const LogMessage&amp;);//！对象语义 而不是值语义
+};
+</code></pre></div></div>
+<p>从源码中，LogMessage有很多的构造函数。<strong>在源码中有说明最好不要使用LogMessage的构造函数来生成日志信息</strong>。下面用其的构造函数来生成日记信息，看看效果如何：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int main(int argc , char * argv[]){
+
+	google::InitGoogleLogging(argv[0]);
+	std::string strMsg = "string";
+	const char *file = "file";
+	google::LogMessage myLog(file, 20, 0, &amp;strMsg);
+	myLog.stream() &lt;&lt; "test!!!!!";
+	myLog.Flush();
+	return EXIT_SUCCESS;
+}
+</code></pre></div></div>
+
+<p>打印出来的日记信息：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Log file created at: 2016/09/10 17:00:38
+Running on machine: WUYUCHUN-PC
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0910 17:00:38.834996  4088 file:20] test!!!!!
+</code></pre></div></div>
+<p>从结果中看来与使用  <strong>LOG(INFO)«“test!!!!!”</strong>  的效果是一样的，从这里也可以看出调用流程。</p>
+
+<h1 id="原理">原理</h1>
+<p>glog借助ostream来实现日记消息的输出，通过对ostream进行继承重写定义自己的输出的格式，从以上的代码就可以看出。在这里先提示ostream如何进行 <strong>“类型可扩展”</strong> 。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class Date{
+public:
+    Date(int year,int month, int day):year_(year),month_(month),day_(day){
+        ;
+    }
+    void writeTo(std::ostream &amp;os) const{
+        os &lt;&lt; year_ &lt;&lt; month_ &lt;&lt; day_;
+    }
+private:
+    int year_,month_,data_;
+}
+
+std::ostream &amp;operator &lt;&lt; (std::ostream, const Date &amp;date){
+    data.writeTo(os);
+    return os;
+}
+
+int main(int argc, char *argv[]){
+    Date date(2000,0,0);
+    std::cout &lt;&lt; date &lt;&lt; std::endl;
+}
+
+</code></pre></div></div>
+<p>从这里可以看出，glog在输出消息的时候选用ostream，以便能自己进行扩展。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Output the COUNTER value. This is only valid if ostream is a
+// LogStream.
+ostream&amp; operator&lt;&lt;(ostream &amp;os, const PRIVATE_Counter&amp;) {
+#ifdef DISABLE_RTTI
+	LogMessage::LogStream *log = static_cast&lt;LogMessage::LogStream*&gt;(&amp;os);
+#else
+	LogMessage::LogStream *log = dynamic_cast&lt;LogMessage::LogStream*&gt;(&amp;os);
+#endif
+	CHECK(log &amp;&amp; log == log-&gt;self())
+		&lt;&lt; "You must not use COUNTER with non-glog ostream";
+	os &lt;&lt; log-&gt;ctr();
+	return os;
+}
+</code></pre></div></div>
+
+<blockquote>
+  <p>iostream 的另外一个问题是线程安全性。stdio 的函数是线程安全的，而且 C 语言还提供了 flockfile(3)/funlockfile(3) 之类的函数来明确控制 FILE* 的加锁与解锁。
+iostream 在线程安全方面没有保证，就算单个 operator« 是线程安全的，也不能保证原子性。因为 cout « a « b; 是两次函数调用，
+相当于 cout.operator«(a).operator«(b)。两次调用中间可能会被打断进行上下文切换，造成输出内容不连续，插入了其他线程打印的字符。
+而 fprintf(stdout, “%s %d”, a, b); 是一次函数调用，而且是线程安全的，打印的内容不会受其他线程影响。因此，iostream 并不适合在多线程程序中做 logging。
+<a href="http://www.cnblogs.com/Solstice/archive/2011/07/17/2108715.html">链接</a></p>
+</blockquote>
+
+<p>glog使用LogMessageData数据结构来组织消息，代码给出的解释的为 <strong>we keep the data in a spearate struct so that each instance of LogMessage uses less stack 
+space</strong></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct LogMessage::LogMessageData  {
+	LogMessageData();
+
+	int preserved_errno_;      // preserved errno
+	// Buffer space; contains complete message text.
+	char message_text_[LogMessage::kMaxLogMessageLen+1];
+	LogStream stream_;
+	char severity_;      // What level is this LogMessage logged at?
+	int line_;                 // line number where logging call is.
+	void (LogMessage::*send_method_)();  // Call this in destructor to send
+	union {  // At most one of these is used: union to keep the size low.
+		LogSink* sink_;             // NULL or sink to send message to
+		std::vector&lt;std::string&gt;* outvec_; // NULL or vector to push message onto
+		std::string* message_;             // NULL or string to write message into
+	};
+	time_t timestamp_;            // Time of creation of LogMessage
+	struct ::tm tm_time_;         // Time of creation of LogMessage
+	size_t num_prefix_chars_;     // # of chars of prefix in this message
+	size_t num_chars_to_log_;     // # of chars of msg to send to log
+	size_t num_chars_to_syslog_;  // # of chars of msg to send to syslog
+	const char* basename_;        // basename of file that called LOG
+	const char* fullname_;        // fullname of file that called LOG
+	bool has_been_flushed_;       // false =&gt; data has not been flushed
+	bool first_fatal_;            // true =&gt; this was first fatal msg
+
+private:
+	LogMessageData(const LogMessageData&amp;);
+	void operator=(const LogMessageData&amp;);
+};
+</code></pre></div></div>
+
+<h1 id="结论">结论</h1>
+<p>从Logmessage类的继承组合来说，跟iostream中的继承和组合类似，这就是C++ I/O中输出。下图给出了一张图，也许更能说明问题。</p>
+
+<p><img src="http://images.cnblogs.com/cnblogs_com/Solstice/201107/201107171508102461.png" alt="" /></p>
+
+
+  </section>
+</article>
+
+<section>
+
+            <div class="content-play">
+              <p><a href="javascript:void(0)" onclick="dashangToggle()" class="dashang" title="打赏，支持一下">打赏一个呗</a></p>
+              <div class="hide_box-play"></div>
+              <div class="shang_box-play">
+                <a class="shang_close-play" href="javascript:void(0)" onclick="dashangToggle()" title="关闭"><img src="/images/payimg/close.jpg" alt="取消" /></a>
+                <div class="shang_tit-play">
+                  <p>感谢您的支持，我会继续努力的!</p>
+                </div>
+                <div class="shang_payimg">
+                    <img src="/images/payimg/alipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+              <div class="shang_payimg">    
+                    <img src="/images/payimg/weipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+                <div class="pay_explain">扫码打赏，你说多少就多少</div>
+                <div class="shang_payselect">
+                  <div class="pay_item checked" data-id="alipay">
+                    <span class="pay_logo"><img src="/images/payimg/alipay.jpg" alt="支付宝" /></span>
+                  </div>
+                  <div class="pay_item" data-id="weipay">
+                    <span class="pay_logo"><img src="/images/payimg/wechat.jpg" alt="微信" /></span>
+                  </div>
+                </div>
+                <div class="shang_info-play">
+                  <p>打开<span id="shang_pay_txt">支付宝</span>扫一扫，即可进行扫码打赏哦</p>
+                </div>
+              </div>
+            </div>
+            <script type="text/javascript">
+            function dashangToggle(){
+              $(".hide_box-play").fadeToggle();
+              $(".shang_box-play").fadeToggle();
+            }
+            </script>
+
+            <div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';"></div>
+
+            <style type="text/css">
+              .content-play{width:80%;margin-top: 20px;margin-bottom: 10px;height:40px;}
+              .hide_box-play{z-index:999;filter:alpha(opacity=50);background:#666;opacity: 0.5;-moz-opacity: 0.5;left:0;top:0;height:99%;width:100%;position:fixed;display:none;}
+              .shang_box-play{width:540px;height:540px;padding:10px;background-color:#fff;border-radius:10px;position:fixed;z-index:1000;left:50%;top:50%;margin-left:-280px;margin-top:-280px;border:1px dotted #dedede;display:none;}
+              .shang_box-play img{border:none;border-width:0;}
+              .dashang{display:block;width:100px;margin:5px auto;height:25px;line-height:25px;padding:10px;background-color:#E74851;color:#fff;text-align:center;text-decoration:none;border-radius:10px;font-weight:bold;font-size:16px;transition: all 0.3s;}
+              .dashang:hover{opacity:0.8;padding:15px;font-size:18px;}
+              .shang_close-play{float:right;display:inline-block;
+                margin-right: 10px;margin-top: 20px;
+              }
+              .shang_logo{display:block;text-align:center;margin:20px auto;}
+              .shang_tit-play{width: 100%;height: 75px;text-align: center;line-height: 66px;color: #a3a3a3;font-size: 16px;background: url('/images/payimg/cy-reward-title-bg.jpg');font-family: 'Microsoft YaHei';margin-top: 7px;margin-right:2px;}
+              .shang_tit-play p{color:#a3a3a3;text-align:center;font-size:16px;}
+              .shang_payimg{width:140px;padding:10px;padding-left: 80px; /*border:6px solid #EA5F00;**/margin:0 auto;border-radius:3px;height:140px;display:inline-block;}
+              .shang_payimg img{display:inline-block;margin-right:10px;float:left;text-align:center;width:140px;height:140px; }
+              .pay_explain{text-align:center;margin:10px auto;font-size:12px;color:#545454;}
+              .shang_payselect{text-align:center;margin:0 auto;margin-top:40px;cursor:pointer;height:60px;width:500px;margin-left:110px;}
+              .shang_payselect .pay_item{display:inline-block;margin-right:140px;float:left;}
+              .shang_info-play{clear:both;}
+              .shang_info-play p,.shang_info-play a{color:#C3C3C3;text-align:center;font-size:12px;text-decoration:none;line-height:2em;}
+            </style>
+
+       <ul class="pager">
+        
+        <li class="previous">
+            <a href="/2016/09/glog%E6%BA%90%E7%A0%81(1)/" data-toggle="tooltip" data-placement="top" title="glog源码（1）">上一篇：  <span>glog源码（1）</span>
+            </a>
+        </li>
+        
+        
+        <li class="next">
+            <a href="/2016/10/ifstream%E5%92%8Ceof%E7%9A%84%E4%BD%BF%E7%94%A8/" data-toggle="tooltip" data-placement="top" title="ifstream和eof的使用">下一篇：  <span>ifstream和eof的使用</span>
+            </a>
+        </li>
+        
+    </ul>
+</section>
+
+<section class="post-comments">
+
+  
+    <div id="disqus_thread"></div>
+    <script>
+    
+    var disqus_config = function () {
+        this.page.url = "http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81-2/";
+        this.page.identifier = "/2016/09/glog%E6%BA%90%E7%A0%81-2/";
+    };
+    var disqus_shortname = 'leopard';
+    
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>要查看<a href="http://disqus.com/?ref_noscript"> Disqus </a>评论，请启用 JavaScript</noscript>
+    
+
+  
+
+</section>
+
+
+            <section class="footer">
+    <footer>
+        <div class = "footer_div">  
+        <nav class="cover-navigation navigation--social">
+          <ul class="navigation">
+
+          
+          <!-- Github -->
+          <li class="navigation__item_social">
+            <a href="https://github.com/leopardpan" title="@leopardpan 的 Github" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/github.png);"></div>
+            </a>
+          </li>
+          
+
+          
+
+          
+
+          
+          <!-- Zhihu -->
+          <li class="navigation__item_social">
+            <a href="https://www.jianshu.com/u/2ada30d8d0f7" title="@2ada30d8d0f7" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/jianshu.png);"></div>
+            </a>
+          </li>
+
+          
+
+          
+          <!-- Weibo -->
+          <li class="navigation__item_social">
+            <a href="http://weibo.com/5366874726" title="@5366874726 的微博" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/weibo.png);"></div>
+            </a>
+          </li>
+          
+
+          
+          
+
+
+          
+          <!-- Email -->
+          <li class="navigation__item_social">
+            <a href="mailto:leopardpan@icloud.com" title="Contact me">
+              <div class="footer-social-icon" style="background:url(/images/email.png);"></div>
+            </a>
+          </li>
+          
+          
+          <!-- RSS -->
+          <li class="navigation__item_social">
+            <a href="/feed.xml" rel="author" title="RSS" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/rss.png);"></div>
+              <span class="label">RSS</span>
+            </a>
+          </li>
+
+          </ul>
+        </nav>
+
+        </div>
+
+        <div class = "footer_div">  
+           <p class="copyright text-muted">
+            Copyright &copy; wuyuchun 2020 Theme by <a href="http://leopardpan.github.io/">leopardpan</a> |
+            <iframe
+                style="margin-left: 2px; margin-bottom:-5px;"
+                frameborder="0" scrolling="0" width="91px" height="20px"
+                src="https://ghbtns.com/github-btn.html?user=leopardpan&repo=leopardpan.github.io&type=star&count=true" >
+            </iframe>
+            </p>
+        	<div align="right">
+    			<link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+          <!-- 访问统计 -->
+          <span id="busuanzi_container_site_pv">
+            本站总访问量
+            <span id="busuanzi_value_site_pv"></span>次
+          </span>
+
+        </div>
+        <div>
+    </footer>
+</section>
+
+        </div>
+    </div>
+    
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="/js/main.js"></script>
+
+<script type="text/javascript" src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+  </body>
+
+</html>

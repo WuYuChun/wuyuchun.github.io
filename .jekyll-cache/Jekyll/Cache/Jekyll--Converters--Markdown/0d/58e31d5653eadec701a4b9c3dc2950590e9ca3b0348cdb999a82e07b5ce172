@@ -1,0 +1,311 @@
+I""-<p>listi</p>
+
+<p>[9:54 PM]</p>
+
+<h2 id="前言">前言</h2>
+<p>经常编译代码，运行代码，修改Bug,也会遇到各种问题，而且有时更多与编译、链接相关的问题，因此，就想了解一下最基本的编译、链接的原理。（平台为windows7和VS2010）</p>
+
+<h2 id="编译">编译</h2>
+<p>先了解编译出来的东东，而且使用的cmd编译命令，而不是IDE，因为使用IDE就无法知道中间过程了。先上码。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int printf( const char *format,...);
+
+int global_int_val = 84;
+int global_uninit_var;
+
+void func1(int i)
+{
+    printf("%d\n",i);
+}
+
+int main(void)
+{
+    static int static_var = 85;
+    static int static_var2;
+    int a = 1;
+    int b;
+    
+    func1( static_var + static_var2+ a + b );
+    
+    return a;
+}
+</code></pre></div></div>
+
+<p>在VS控制台的命令，<strong>cl /c /Za SimpleSection.c</strong>，产生的文件为<strong>SimpleSection.obj</strong>，打开后就是一大堆二进制的数据。用 <strong>dumpbin</strong>工具进行查看，命令<strong>dumpbin /ALL SimpleSection.obj &gt; SimpleSection.txt</strong>,产生的结果如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Microsoft (R) COFF/PE Dumper Version 10.00.30319.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file SimpleSection.obj
+
+File Type: COFF OBJECT
+
+FILE HEADER VALUES
+             14C machine (x86)
+               5 number of sections
+        55B240DA time date stamp Fri Jul 24 21:42:50 2015
+             1F0 file pointer to symbol table
+              14 number of symbols
+               0 size of optional header
+               0 characteristics
+
+SECTION HEADER #1
+.drectve name
+       0 physical address
+       0 virtual address
+      18 size of raw data
+      DC file pointer to raw data (000000DC to 000000F3)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+  100A00 flags
+         Info
+         Remove
+         1 byte align
+
+RAW DATA #1
+  00000000: 20 20 20 2F 44 45 46 41 55 4C 54 4C 49 42 3A 22     /DEFAULTLIB:"
+  00000010: 4C 49 42 43 4D 54 22 20                          LIBCMT" 
+
+   Linker Directives
+   -----------------
+   /DEFAULTLIB:"LIBCMT"
+
+SECTION HEADER #2
+.debug$S name
+       0 physical address
+       0 virtual address
+      70 size of raw data
+      F4 file pointer to raw data (000000F4 to 00000163)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+42100040 flags
+         Initialized Data
+         Discardable
+         1 byte align
+         Read Only
+
+RAW DATA #2
+  00000000: 04 00 00 00 F1 00 00 00 61 00 00 00 23 00 01 11  ....?...a...#...
+  00000010: 00 00 00 00 45 3A 5C 50 72 6F 67 72 61 6D 5C 53  ....E:\Program\S
+  00000020: 69 6D 70 6C 65 53 65 63 74 69 6F 6E 2E 6F 62 6A  impleSection.obj
+  00000030: 00 3A 00 3C 11 00 22 00 00 07 00 10 00 00 00 6F  .:.&lt;.."........o
+  00000040: 76 01 00 10 00 00 00 6F 76 01 00 4D 69 63 72 6F  v......ov..Micro
+  00000050: 73 6F 66 74 20 28 52 29 20 4F 70 74 69 6D 69 7A  soft (R) Optimiz
+  00000060: 69 6E 67 20 43 6F 6D 70 69 6C 65 72 00 00 00 00  ing Compiler....
+
+SECTION HEADER #3
+   .data name
+       0 physical address
+       0 virtual address
+       C size of raw data
+     164 file pointer to raw data (00000164 to 0000016F)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300040 flags
+         Initialized Data
+         4 byte align
+         Read Write
+
+RAW DATA #3
+  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
+
+SECTION HEADER #4
+   .text name
+       0 physical address
+       0 virtual address
+      4E size of raw data
+     170 file pointer to raw data (00000170 to 000001BD)
+     1BE file pointer to relocation table
+       0 file pointer to line numbers
+       5 number of relocations
+       0 number of line numbers
+60500020 flags
+         Code
+         16 byte align
+         Execute Read
+
+RAW DATA #4
+  00000000: 55 8B EC 8B 45 08 50 68 00 00 00 00 E8 00 00 00  U.ì.E.Ph....è...
+  00000010: 00 83 C4 08 5D C3 CC CC CC CC CC CC CC CC CC CC  ..?.]?ìììììììììì
+  00000020: 55 8B EC 83 EC 08 C7 45 FC 01 00 00 00 A1 00 00  U.ì.ì.?Eü....?..
+  00000030: 00 00 03 05 00 00 00 00 03 45 FC 03 45 F8 50 E8  .........Eü.E?Pè
+  00000040: 00 00 00 00 83 C4 04 8B 45 FC 8B E5 5D C3        .....?..Eü.?]?
+
+RELOCATIONS #4
+                                                Symbol    Symbol
+ Offset    Type              Applied To         Index     Name
+ --------  ----------------  -----------------  --------  ------
+ 00000008  DIR32                      00000000         A  $SG893
+ 0000000D  REL32                      00000000         F  _printf
+ 0000002E  DIR32                      00000000         B  ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+ 00000034  DIR32                      00000000        13  ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+ 00000040  REL32                      00000000         E  _func1
+
+SECTION HEADER #5
+    .bss name
+       0 physical address
+       0 virtual address
+       4 size of raw data
+       0 file pointer to raw data
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300080 flags
+         Uninitialized Data
+         4 byte align
+         Read Write
+
+COFF SYMBOL TABLE
+000 00AA766F ABS    notype       Static       | @comp.id
+001 00000001 ABS    notype       Static       | @feat.00
+002 00000000 SECT1  notype       Static       | .drectve
+    Section length   18, #relocs    0, #linenums    0, checksum        0
+004 00000000 SECT2  notype       Static       | .debug$S
+    Section length   70, #relocs    0, #linenums    0, checksum        0
+006 00000004 UNDEF  notype       External     | _global_uninit_var
+007 00000000 SECT3  notype       Static       | .data
+    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
+009 00000000 SECT3  notype       External     | _global_int_val
+00A 00000004 SECT3  notype       Static       | $SG893
+00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+00C 00000000 SECT4  notype       Static       | .text
+    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
+00E 00000000 SECT4  notype ()    External     | _func1
+00F 00000000 UNDEF  notype ()    External     | _printf
+010 00000020 SECT4  notype ()    External     | _main
+011 00000000 SECT5  notype       Static       | .bss
+    Section length    4, #relocs    0, #linenums    0, checksum        0
+013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+
+String Table Size = 0x5C bytes
+
+  Summary
+
+           4 .bss
+           C .data
+          70 .debug$S
+          18 .drectve
+          4E .text
+
+</code></pre></div></div>
+
+<h2 id="coff的文件格式">COFF的文件格式</h2>
+
+<p>其实从上面的结果比较让人不解，所以需要了解一下COFF文件的格式，这样的话，在回头看的时候，就比较非常容易的理解了。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Image Header  IMAGE_FILE_HEADER</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Section Tabel IMAGE_SECTION_HEADER[]</td>
+    </tr>
+    <tr>
+      <td>.text</td>
+    </tr>
+    <tr>
+      <td>.data</td>
+    </tr>
+    <tr>
+      <td>.drectve</td>
+    </tr>
+    <tr>
+      <td>.debug$S</td>
+    </tr>
+    <tr>
+      <td>…</td>
+    </tr>
+    <tr>
+      <td>Symbol Table</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>把上面的结果进行分割，以便更好的理解，COFF格式！</p>
+
+<h3 id="image-header">Image Header</h3>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>File Type: COFF OBJECT    ---&gt; 文件类型
+
+FILE HEADER VALUES
+             14C machine (x86) --&gt; 目标机器类型 微软定义14C表示X86
+               5 number of sections --&gt; 段的数量
+        55B240DA time date stamp Fri Jul 24 21:42:50 2015 --&gt;创建时间
+             1F0 file pointer to symbol table --&gt;符号表在PE中的位置
+              14 number of symbols ---&gt;符号数量
+               0 size of optional header ----&gt; OptionalHeader的大小，不存在为0
+               0 characteristics
+</code></pre></div></div>
+
+<h3 id="section-tabe">Section Tabe</h3>
+
+<p>COFF文件的段表，它是一个类型为“IMAGE_SECTION_HEADER”结构的数组，数组里面每一个元素代表一个段。这个数组的元素与该文件包含的段的数量是一致。可以查看一下IMAGE_SECTION_HEADER，就可以与下面的内容对应上了。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SECTION HEADER #3
+   .data name
+       0 physical address
+       0 virtual address
+       C size of raw data
+     164 file pointer to raw data (00000164 to 0000016F)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300040 flags
+         Initialized Data
+         4 byte align
+         Read Write
+
+RAW DATA #3
+  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
+</code></pre></div></div>
+
+<h3 id="symboltable">Symboltable</h3>
+
+<p>最后的面的是COFF符号表</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>COFF SYMBOL TABLE
+000 00AA766F ABS    notype       Static       | @comp.id
+001 00000001 ABS    notype       Static       | @feat.00
+002 00000000 SECT1  notype       Static       | .drectve
+    Section length   18, #relocs    0, #linenums    0, checksum        0
+004 00000000 SECT2  notype       Static       | .debug$S
+    Section length   70, #relocs    0, #linenums    0, checksum        0
+006 00000004 UNDEF  notype       External     | _global_uninit_var
+007 00000000 SECT3  notype       Static       | .data
+    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
+009 00000000 SECT3  notype       External     | _global_int_val
+00A 00000004 SECT3  notype       Static       | $SG893
+00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+00C 00000000 SECT4  notype       Static       | .text
+    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
+00E 00000000 SECT4  notype ()    External     | _func1
+00F 00000000 UNDEF  notype ()    External     | _printf
+010 00000020 SECT4  notype ()    External     | _main
+011 00000000 SECT5  notype       Static       | .bss
+    Section length    4, #relocs    0, #linenums    0, checksum        0
+013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+
+</code></pre></div></div>
+<p>第一列为符号的编号，即符号在符号表中的下表。</p>
+
+<p>第二列为符号的大小，即符号所表示的对象所占用的空间。</p>
+
+<p>第三列为符号所在的位置，ABS表示不存在任何一段中，SECT1表示在本文件第一段中。UNDEF表示未定义的。</p>
+
+<p>第四列为符号的类型，notype为变量，notype()表示函数，只有两种类型。</p>
+
+<p>第五列为符号的可见范围，static为局部变量，External为全局变量。</p>
+
+<p>第六列为符号的符号名。</p>
+:ET

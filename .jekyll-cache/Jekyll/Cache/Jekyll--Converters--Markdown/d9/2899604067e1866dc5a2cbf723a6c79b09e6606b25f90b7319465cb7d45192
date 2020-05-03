@@ -1,0 +1,46 @@
+I"I<p>listi</p>
+
+<p>[21:42]</p>
+
+<h1 id="前言">前言</h1>
+
+<p>在看书的时候，突然想到如何在main函数之前执行一些函数呢？因为使用C++，下面主要针对于C++</p>
+
+<h1 id="解决方法">解决方法</h1>
+
+<p>在main之前运行函数，其实一种最简单的方法就是在定义一个全局变量，因为对于C++来说，全局变量的构造函数必须是在main之前调用的，在main结束之后，调用全局变量的析构函数。</p>
+
+<p>上码：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class CTest
+{
+public:
+	CTest(void);
+	~CTest(void);
+};
+
+CTest::CTest(void)
+{
+	cout&lt;&lt;"Before Main"&lt;&lt;endl;
+}
+
+
+CTest::~CTest(void)
+{
+	cout&lt;&lt;"End Main"&lt;&lt;endl;
+}
+
+CTest test;
+
+int main()
+{
+	std::cout&lt;&lt;"Main ing"&lt;&lt;std::endl;
+}
+</code></pre></div></div>
+<p>结果就是：
+<img src="http://img.blog.csdn.net/20150709214015458" alt="img" /></p>
+
+<h1 id="结论">结论</h1>
+
+<p>这样就可以在main函数之前或者之后进行调用一些函数，进行一些初始化工作等。</p>
+:ET

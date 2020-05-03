@@ -1,0 +1,151 @@
+I"�<p>listi</p>
+
+<p>[10:07 PM]</p>
+
+<h1 id="目标">目标</h1>
+<p><strong>在我们只有一个指向基类的指针或者引用时确定一个对象的准确类型</strong>，虚函数机制可以帮助我们确定类是哪种类型，但是却远远不够。例如下面的代码：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class shape()
+{
+	shape();
+	~shape();
+	virtual void draw() = 0;
+}
+</code></pre></div></div>
+
+<p>从这个基类派生出三种不同的类：circle、square、triangle。我们调用其中类的draw方法，即使用一个shape()的指针来调用，任然被正确调用。</p>
+
+<hr />
+<p><strong>注意</strong>：RTTI与异常一样，依赖驻留在虚函数表中的类型信息。如果试图在一个没有虚函数的类上用RTTI，就得不到预期的结果。(可以进行测试一下)</p>
+
+<hr />
+
+<h1 id="rtti的两种使用方法">RTTI的两种使用方法</h1>
+<p>（1）使用typeid关键字，注意这是一个关键字，像sizeof一样。</p>
+
+<p>（2）“安全类型向下映射”，其实就是与“向上映射”相反。</p>
+
+<p><strong>实现的方法</strong>：创建一个函数来试着将 shape<em>指派为一个 circle</em> (在本例中 )，检查执行过程中的数据类型。如果这个函数返回一个地址，则成功；如果返回 NULL，说明我们并没有一个circle *对象。C++的RTII的“安全类型向下映射”就是按照这种“试探映射”函数的格式。例子：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shape *sp = new circle;
+circle *cp = dynamic_cast&lt;circle*&gt;sp
+if(cp) cout&lt;&lt;"cast successful"
+</code></pre></div></div>
+
+<p>见下面例子</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class shape
+{
+protected:
+	static int count;
+public:
+shape()
+{
+	count++;
+}
+virtual ~shape() 
+{
+	count--;
+}
+virtual void draw() 
+{
+
+}
+};
+
+int shape::count = 0;
+
+class rectage:public shape
+{
+void operator=(rectage &amp;);
+protected:
+	static int count;
+public:
+rectage()
+{
+	count++;
+}
+~rectage()
+{
+	count--;
+}
+void draw()
+{
+	std::cout&lt;&lt;"~~~~~~"&lt;&lt;std::endl;
+}
+static int quatiy()
+{
+	return count;
+}
+};
+
+int rectage::count = 0;
+
+class circle:public shape
+{
+void operator=(rectage &amp;);
+protected:
+	static int count;
+public:
+circle()
+{
+	count++;
+}
+~circle()
+{
+	count--;
+}
+void draw()
+{
+	std::cout&lt;&lt;"~~~~~~"&lt;&lt;std::endl;
+}
+static int quatiy()
+{
+	return count;
+}
+};
+
+int circle::count = 0;
+
+int main( int argc , char *argv[] )
+{
+std::vector&lt;shape *&gt; vVal;
+time_t t;
+srand((unsigned)time(&amp;t));
+const int mod = 12;
+for ( int i = 0 ; i &lt; rand()%12; ++i )
+{
+	vVal.push_back((shape *)(new rectage));
+}
+for ( int j = 0; j &lt; rand()%12; ++j )
+{
+	vVal.push_back((shape *)(new circle));
+}
+int iRecCount = 0;
+int iCirCount = 0;
+for ( int u = 0; u &lt; vVal.size() ; ++u)
+{
+	if ( dynamic_cast&lt;rectage*&gt;(vVal.at(u)))
+	{
+		iRecCount++;
+	}
+
+	if ( dynamic_cast&lt;circle*&gt;(vVal.at(u)))
+	{
+		iCirCount++;
+	}
+}
+
+std::cout&lt;&lt;vVal.size()&lt;&lt;std::endl
+	&lt;&lt;iRecCount &lt;&lt;" == "&lt;&lt;rectage::quatiy()&lt;&lt;std::endl
+	&lt;&lt;iCirCount &lt;&lt;" == "&lt;&lt;circle::quatiy()&lt;&lt;"\n";
+
+
+	return EXIT_SUCCESS;
+}
+</code></pre></div></div>
+
+<h1 id="总结">总结</h1>
+<p>RIIT是C++的第二大特征（第一大特征是什么额？），上面只是大概的介绍了一下它，详细的使用见下面分解。</p>
+
+:ET

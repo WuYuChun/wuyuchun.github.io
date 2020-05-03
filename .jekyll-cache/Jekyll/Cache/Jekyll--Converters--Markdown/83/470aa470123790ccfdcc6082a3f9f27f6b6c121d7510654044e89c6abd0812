@@ -1,0 +1,95 @@
+I"=
+<p>listi</p>
+
+<p>[9:55 PM]</p>
+
+<h1 id="问题">问题</h1>
+<p>在一个文件中记录了人的姓名和生日，找出相同生日的人，文件格式如下：0212Test 表示Test的生日为2月12日。</p>
+
+<h1 id="思路">思路</h1>
+<p>其实很简单，用一个散列表就可以搞定。散列表的秘密是：它提供了一种方法，可以计算出特定的数据存储在表中的什么位置。这种测定是由散列函数执行，它接收一份要存储到表中的数据，并生成一个数字，指定数据存储在表中的哪个槽中，这个数字称为散列键。
+想找出相同的生日的人，那么前提就是把生日作为一个散列键。</p>
+
+<h1 id="代码">代码</h1>
+
+<p>以下为散列函数！</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int hash_birthday( const char *data)
+{
+	if ( NULL == data )
+	{
+		fprintf(stderr,"ParaErr!Para==NULL!");
+		exit(EXIT_FAILURE);
+	}
+	const int days_elapsed[12] = 
+		{0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
+	char record[128] = {0};
+	memcpy(record,data,strlen(data));
+	record[4] = '\0';
+	int dd = atoi( record + 2);
+	record[2] = '\0';
+	int mm = atoi(record);
+
+	if ( mm &lt; 1 || mm &gt; 12 )
+	{
+		fprintf(stderr,"MM ilegal!");
+		exit(EXIT_FAILURE);
+	}
+
+	return (days_elapsed[mm-1]+dd);
+}
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nt TestHashTable( int argc , char *argv[] )
+{
+	if ( argc &lt; 2)
+	{
+		fprintf(stderr,"argc Err!");
+		exit(EXIT_FAILURE);
+	}
+	FILE *fin = NULL;
+	if ( (fin = fopen(argv[1],"rt")) == NULL )
+	{
+		fprintf(stderr,"Open file Err!");
+		exit(EXIT_FAILURE);
+	}
+	char *Table[TABLE_SIZE] = {0};
+
+	char buffer[128] = {0};
+	int hash_value;
+	int NameCount = 0;
+	int DuplicName = 0;
+	char *Name = NULL;
+	while ( !feof(fin) )
+	{
+		if ( fgets(buffer,128,fin) == NULL )
+		{
+			break;
+		}
+		buffer[strlen(buffer) - 1 ] = '\0';
+		++NameCount;
+
+		hash_value = hash_birthday(buffer);
+		Name = strdup(buffer+4);
+		if ( Table[hash_value] == NULL )
+		{
+			Table[hash_value] = Name;
+			continue;
+		}
+		else
+		{
+			++DuplicName;
+			printf("%s and %s have the same birthday.\n",Name,Table[hash_value]);
+			continue;
+		}	
+	}
+	return EXIT_SUCCESS;
+
+}
+</code></pre></div></div>
+<p>以上为使用散列函数把数据存储到表中
+运行结果
+<img src="http://img.blog.csdn.net/20150507215405136" alt="运行结果" /></p>
+
+<h1 id="总结">总结</h1>
+<p>散列表不仅仅这么简单，因为它存在一个必须的冲突，就是相同键如何处理的问题。两种方法：重新计算键和拉链法</p>
+:ET

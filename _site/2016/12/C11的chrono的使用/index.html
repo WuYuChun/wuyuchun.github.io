@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <title>C11中的chrono的使用</title>
+  <meta name="description" content="listi">
+  <meta name="author" content="leopardpan">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="C11中的chrono的使用">
+  <meta name="twitter:description" content="listi">
+  
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="C11中的chrono的使用">
+  <meta property="og:description" content="listi">
+  
+  <link rel="icon" type="image/png" href="/images/favicon.png" />
+  <link href="/images/favicon.png" rel="shortcut icon" type="image/png">
+  
+  <link rel="stylesheet" href="/css/main.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="canonical" href="http://localhost:4000/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/">
+  <link rel="alternate" type="application/rss+xml" title="wuyuchun" href="http://localhost:4000/feed.xml">
+  
+  <meta name="google-site-verification" content="1-1ZlHoRvM0T2FqPbW2S-qLgYXN6rsn52kErlMPd_gw" />
+
+<!-- 站点统计 -->
+  <script 
+  async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js">
+  </script>  
+
+<!-- 百度统计 -->
+  
+  <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "//hm.baidu.com/hm.js?xxxx";
+        var s = document.getElementsByTagName("script")[0]; 
+        s.parentNode.insertBefore(hm, s);
+      })();
+  </script>
+  
+
+<!-- google 统计 -->
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      ga('create', 'xxxx', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-9005224472374751",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+
+  <body>
+
+    <span class="mobile btn-mobile-menu">        
+      <div class="nav_container">
+         <nav class="nav-menu-item" style = "float:right">
+            <i class="nav-menu-item">
+              <a href="/#blog" title="" class="blog-button">  博客主页
+              </a>
+            </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/archive" title="archive" class="btn-mobile-menu__icon">
+                      所有文章
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/tags" title="tags" class="btn-mobile-menu__icon">
+                      标签
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/about" title="about" class="btn-mobile-menu__icon">
+                      关于我
+                  </a>
+                </i>
+            
+          </nav>
+      </div>
+    </span>
+    
+    <header class="panel-cover panel-cover--collapsed" style="background-image: url('/images/background-cover.jpg')">
+  <div class="panel-main">
+
+    <div class="panel-main__inner panel-inverted">
+    <div class="panel-main__content">
+        <!-- 头像效果-start -->
+        <div class="ih-item circle effect right_to_left">            
+            <a href="/#blog" title="前往 wuyuchun 的主页" class="blog-button">
+                <div class="img"><img src="/images/avatar.jpg" alt="img"></div>
+                <div class="info">
+                    <div class="info-back">
+                        <h2> 
+                            
+                                messi
+                            
+                        </h2>
+                        <p>
+                           
+                                机器学习/ 优化师
+                            
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- 头像效果-end -->
+        <h1 class="panel-cover__title panel-title"><a href="/#blog" title="link to homepage for wuyuchun" class="blog-button">wuyuchun</a></h1>
+        
+        <span class="panel-cover__subtitle panel-subtitle">个人站</span>
+        
+        <hr class="panel-cover__divider" />
+        <p class="panel-cover__description">欢迎来到我的个人站~</p>
+        <hr class="panel-cover__divider panel-cover__divider--secondary" />
+        
+        
+        
+
+        <div class="navigation-wrapper">
+          <div>
+            <nav class="cover-navigation cover-navigation--primary">
+              <ul class="navigation">
+                <li class="navigation__item"><a href="/#blog" title="" class="blog-button">博客主页</a></li>
+                
+                  <li class="navigation__item"><a href="/archive" title="archive">所有文章</a></li>
+                
+                  <li class="navigation__item"><a href="/tags" title="tags">标签</a></li>
+                
+                  <li class="navigation__item"><a href="/about" title="about">关于我</a></li>
+                
+              </ul>
+            </nav>
+          </div>          
+        </div>
+
+
+        </div>
+      </div>
+    </div>
+    
+    
+    <div class="panel-cover--overlay cover-clear"></div>
+    
+  </div>
+</header>
+
+
+    <div class="content-wrapper">
+        <div class="content-wrapper__inner">
+            <article class="post-container post-container--single" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title">C11中的chrono的使用</h1>
+    <div class="post-meta">
+      <img src="/images/calendar.png" width="20px"/> 
+      <time datetime="2016-12-04 12:18:00 +0800" itemprop="datePublished" class="post-meta__date date">2016-12-04</time>  
+         
+      <span id="busuanzi_container_page_pv"> | 阅读：<span id="busuanzi_value_page_pv"></span>次</span>
+    </p>
+    </div>
+  </header>
+
+  <section class="post">
+    <p>listi</p>
+
+<p>[12:18 ]</p>
+
+<p>[C++ 11增加了三个与时间相关的类型：时间段、时钟、时间点。]</p>
+<h1 id="前言">前言</h1>
+
+<p>现有的系统API中，时间太过于碎片化了。有time_t(秒)、struct timeval(微秒)、struct timespec(纳秒)这几个时间单位，他们的接口非常不统一，点击这里可以体会一下。主要原因：是由于新业务的需求，
+要求提供不同精度的时间。于是每次出现新需求就定义一个新类型。为此，C++11提出一个”一统江湖”的做法，避免这类现象的发生。 时间精度其实也就是时间分辨率。抛开时间量纲单论分辨率
+，其实就是一个比率。如：10001、101、11 、110、11000。这些比率加上距离量纲就变成距离分辨率，加上时间量纲就变成时间分辨率了。为此，C++11定义了一个新的模板类ratio，用于表示比率，定义如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;ration&gt;
+template&lt;std::intmax_t Num, std::intmax_t Denom = 1&gt; //前者是分子，后者是分母 后者表示 1秒
+class ratio;
+
+</code></pre></div></div>
+<p>为了方便，C++标准委员会还预定义了下面这些分辨率，供用户使用。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;ratio&gt;
+typedef ratio&lt;1,       1000000000000000000&gt; atto;
+typedef ratio&lt;1,          1000000000000000&gt; femto;
+typedef ratio&lt;1,             1000000000000&gt; pico;
+typedef ratio&lt;1,                1000000000&gt; nano;
+typedef ratio&lt;1,                   1000000&gt; micro;
+typedef ratio&lt;1,                      1000&gt; milli;
+typedef ratio&lt;1,                       100&gt; centi;
+typedef ratio&lt;1,                        10&gt; deci;
+typedef ratio&lt;                       10, 1&gt; deca;
+typedef ratio&lt;                      100, 1&gt; hecto;
+typedef ratio&lt;                     1000, 1&gt; kilo;
+typedef ratio&lt;                  1000000, 1&gt; mega;
+typedef ratio&lt;               1000000000, 1&gt; giga;
+typedef ratio&lt;            1000000000000, 1&gt; tera;
+typedef ratio&lt;         1000000000000000, 1&gt; peta;
+typedef ratio&lt;      1000000000000000000, 1&gt; exa;
+</code></pre></div></div>
+
+<h1 id="时间断">时间断</h1>
+
+<p>30分钟，0.5秒都表示一段时间。由此可以得到：一段时间是由”数值+时间单位”组成的。反映在编程上就是要存储两个变量。显然，数值有整数和小数两种，
+究竟是使用整数(int)还是小数(double)应该由用户指定。无疑，用模板表示之是非常合适的。结合前面提到的时间精度，不难得出一段时间应该定义为如下形式：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;chrono&gt;
+template&lt;class Rep, class Period = std::ratio&lt;1&gt; &gt; 
+class duration;
+</code></pre></div></div>
+<p>于是，30秒就有下面几种表示方式：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::duration&lt;int, std::ratio&lt;1,1&gt;&gt; a(30);//30秒
+std::chrono::duration&lt;int&gt; b(30);//30秒
+std::chrono::duration&lt;int, std::ratio&lt;1, 1000&gt;&gt; c(30000);//30 000毫秒
+std::chrono::duration&lt;double, std::ratio&lt;60,1&gt;&gt; d(0.5);//半分钟
+</code></pre></div></div>
+<p>同样，C++标准委员会预定义了下面这些类型，供我们直接使用。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>std::chrono::nanoseconds    duration&lt;/*signed integer type of at least 64 bits*/, std::nano&gt;
+std::chrono::microseconds   duration&lt;/*signed integer type of at least 55 bits*/, std::micro&gt;
+std::chrono::milliseconds   duration&lt;/*signed integer type of at least 45 bits*/, std::milli&gt;
+std::chrono::seconds    duration&lt;/*signed integer type of at least 35 bits*/&gt;
+std::chrono::minutes    duration&lt;/*signed integer type of at least 29 bits*/, std::ratio&lt;60&gt;&gt;
+std::chrono::hours  duration&lt;/*signed integer type of at least 23 bits*/, std::ratio&lt;3600&gt;&gt;
+</code></pre></div></div>
+<p>又是讨厌的implementation-defined，gcc4.9.0的一个实现为：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>typedef duration&lt;int64_t, nano&gt;         nanoseconds;
+typedef duration&lt;int64_t, micro&gt;        microseconds;
+typedef duration&lt;int64_t, milli&gt;        milliseconds;
+typedef duration&lt;int64_t&gt;           seconds;
+typedef duration&lt;int64_t, ratio&lt; 60&gt;&gt;   minutes;
+typedef duration&lt;int64_t, ratio&lt;3600&gt;&gt;  hours;
+</code></pre></div></div>
+<p>当定义了一个时间段后，如何从中得知该时间段类型的rep和period模板参数的类型呢？其实，当我们用具体的类型实例化duration模板类后，
+实例化的类就会有rep和period这两个成员类型。于是，可以借助C++11中的关键字decltype以及直接从定义中获取。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+typedef std::chrono::duration&lt;int, std::ratio&lt;60&gt;&gt; Minus;
+Minus::rep a = 30; //a是int类型
+Minus::period per;//per的类型是 std::ration&lt;60, 1&gt;。即per.num 为60， per.den 为1
+
+Minus twenty_seconds(20);
+decltype(twenty_seconds.count()) b = 30;//后面会介绍count()的返回值类型, b的类型为int
+decltype(twenty_seconds)::rep e = 40;//e的类型为int
+</code></pre></div></div>
+<p>duration模板类提供了一个成员函数count()用户获取该时间段的值，这个值也称为滴答数。它的返回值类型就是实例化后成员类型rep。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::seconds twenty_sec(20);
+int c = twenty_sec.count();//c等于20
+std::chrono::duration&lt;double&gt; half_sec(0.5);
+double d = half_sec.count();//d等于0.5
+</code></pre></div></div>
+
+<h1 id="时钟">时钟</h1>
+
+<p>时钟有电子表、怀表、秒表、原子钟等。这些时钟的时间精度有所不同。此外，对于电子表的时间是无法取小数的，而怀表则可以人为地取小数。
+这说明不同的时钟也会有前面时间段类型duration的rep和period这两个属性。并且也是以成员类型的形式出现。但时钟类本身不是模板类。 
+C++11为我们提供了三种时钟类型：system_clock、steady_clock、high_resolution_clock。 这三个时间类都提供了rep、period、duration成员类型。
+因为各个系统能提供的时间精度可能不同，所以period的真正类型是implementation-defined的。这三个时钟类都提供了一个静态成员函数now()用于获取当前时间，该函数的返回值是一个time_point类型，后面会介绍。 
+<strong>注意：，虽然这三个时钟都很多相同的成员类型和成员函数，但它们是没有亲缘关系的。这三个时钟类型都是类，并非模板类。</strong>
+这三个时钟有什么区别呢？system_clock就类似Windows系统右下角那个时钟，是系统时间。明显那个时钟是可以乱设置的。明明是早上10点，
+却可以设置成下午3点。steady_clock则针对system_clock可以随意设置这个缺陷而提出来的，他表示时钟是不能设置的。想了解更多，可以点击这里。high_resolution_clock则是一个高分辨率时钟。 
+system_clock除了now()函数外，还提供了to_time_t()静态成员函数。用于将系统时间转换成熟悉的std::time_t类型，得到了std::time_t类型的值，就可以很方便地打印当前时间了。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto tp = std::chrono::system_clock::now();
+std::time_t cur_time = std::chrono::system_clock::to_time_t(tp);
+std::string str_time = std::ctime(&amp;cur_time);
+std::cout&lt;&lt;str_time&lt;&lt;std::endl;
+</code></pre></div></div>
+<p>注意：不要将steady_clock、high_resolution_clock时钟的now()返回值作为to_time_t的参数，这会导致编译通不过。因为类型不匹配，后面会详解。 
+其实，如果读者有把刚才那个链接点开，并去了解的steady_clock的话，不用了解now()返回值类型就能知道这样做肯定是不行的了。
+steady_clock的实现是使用monotonic时间，而monotonic时间一般是从boot启动后开始计数的。明显这不能获取日历时间(年月日时分秒)。
+那么steady_clock有什么用途呢？时间比较！并且是不受用户调整系统时钟影响的时间比较。简单的例子如下：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto begin = std::chrono::steady_clock::now();
+for(int i = 0; i &lt; 10000000; ++i)
+{
+    //复杂的数学运算
+}
+auto end = std::chrono::steady_clock::now();
+auto diff = (end - begin).count();//end-begin得到一个duration类型
+std::cout&lt;&lt;diff&lt;&lt;std::endl;
+</code></pre></div></div>
+<p>即使在做数学运算的时候，有人修改了系统时间，也能准确计算出for循环消耗的时间。</p>
+
+<h1 id="时间点">时间点</h1>
+
+<p>前面已经指出：时钟类的now()函数的返回值是一个time_point类(型)。不言而喻，时间点(time_point)必然是时钟相关的。
+从怀表读取到的时间(点)只有小时、分钟、秒，手机则能提供日期+时分秒。此外，不同时钟提供的时间精度也有所不同。所以，
+时间点(time_point)类至少得有时钟类型、时间精度这两个属性。同前面介绍的时间段模板类一样，这两个属性也是以模板参数的形式出现。time_point的定义如下：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//#include&lt;chrono&gt;
+template&lt; class Clock, class Duration = typename Clock::duration &gt; 
+class time_point;
+</code></pre></div></div>
+<p>时间精度是duration类，默认的时钟模板参数提供的duration。时钟模板参数除了前面介绍的那三个时钟(这是C++默认提供的)外，还可以是码农自己定义的时钟类。 
+同前面的时间段类和时钟类一样，时间点类也提供了rep、period、duration、clock这几个成员类型。
+前面已经指出，各个时钟能提供的时间精度是implementation-defined的。所以应该如下面代码那样获取时钟的now()函数返回值。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>auto tp = std::chrono::system_clock::now();
+std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+</code></pre></div></div>
+<p>下面代码是不正确的，不具有可移植性。例子来自stackoverflow。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>std::chrono::time_point&lt;std::chrono::system_clock,std::chrono::nanoseconds&gt; time_point;
+time_point = std::chrono::system_clock::now();
+</code></pre></div></div>
+<p>除了从时钟类的now函数中获取一个time_point，还可以直接构造一个time_point对象。time_point模板类的构造函数有无参的、
+用duration作为参数这两个构造函数。对此，我感到很奇怪：直接构造出来的time_point有什么含义呢？
+time_point有一个time_since_epoch()成员函数，返回从epoch时间到此刻的时间段。epoch时间是时钟的开启时间。
+对于system_clock和high_resolution_clock来说，epoch是1970-01-01T00:00:00。熟悉C语言time()函数的读者对此应该不陌生。
+steady_clock时钟则是boot启动时间，所以不应该对steady_clock::now()返回的time_point调用time_since_epoch()。下面是霸王强上弓使用，打印出来的时间是1970年的。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+auto tp = std::chrono::steady_clock::now();
+std::time_t cur_time = std::chrono::duration_cast&lt;std::chrono::seconds&gt;(tp.time_since_epoch()).count();
+std::string str_time = std::ctime(&amp;cur_time);
+cout&lt;&lt;str_time&lt;&lt;endl;
+</code></pre></div></div>
+<p>如果time_point不是从时钟类的now()返回值得来的，而是直接构造出来的话，那么它调用time_since_epoch()的返回值就等同于构造函数中的duration参数。</p>
+
+<h1 id="运算">运算</h1>
+
+<p>一段时间的加减乘除无疑是合理的，当然关系比较也是合理的。C++标准委员会还把取模运算也变成合法的了，不仅仅模一个数值合法，模duration类也是合法的。于是有下面这些运算： 
+duration运算
+—
+       具体的使用例子就不写了，读者可以参考en.cppreference.com 
+       上面的运算都是二元运算，如果参与运算的两个duration具有相同的模板参数，那直接运行即可。如果不同，那么将发生隐式转换：int-&gt;double; 低分辨率-&gt;高分辨率。比如：
+—</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::duration&lt;int&gt; two(2);
+std::chrono::duration&lt;double, std::ratio&lt;60&gt;&gt; thirty(0.5);
+
+auto ad = two + thirty;
+cout&lt;&lt;sizeof(decltype(ad)::rep)&lt;&lt;endl;//8
+cout&lt;&lt;ad.count()&lt;&lt;"\t"&lt;&lt;decltype(ad)::period::num&lt;&lt;"/"&lt;&lt;decltype(ad)::period::den&lt;&lt;endl;//32  1/1
+</code></pre></div></div>
+<p>如果参与运算的两个duration具有不同的模板参数，那么能不能进行+=和-=这里运算呢？
+a+=b等同于a=a+b。a+b肯定是可以的，现在问题转换为a=c是否可行？从低精度(包含Rep和Period)到高精度的隐式转换是可行的，反之则是不可以的。因为这将导致截断，丢失部分信息。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::minutes a(30);
+std::chrono::seconds b = a;//OK
+std::chrono::minutes c = b;//compile error
+
+std::chrono::duration&lt;double, std::ratio&lt;60&gt;&gt; d(3);
+std::chrono::seconds e = d;//compile error
+std::chrono::duration&lt;double&gt; f = d;//OK
+</code></pre></div></div>
+<p>如果确实需要进行转换的话，那么需要使用duration_cast进行显式转换。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//Author: luotuo44   http://blog.csdn.net/luotuo44
+std::chrono::seconds a(30);
+std::chrono::minutes b = std::chrono::duration_cast&lt;std::chrono::minutes&gt;(a);
+cout&lt;&lt;b.count()&lt;&lt;endl;//结果是0
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//下面是system_clock时钟类to_time_t函数的gcc实现
+static std::time_t to_time_t(const time_point&amp; __t) noexcept
+{
+    return std::time_t(duration_cast&lt;chrono::seconds&gt; (__t.time_since_epoch()).count());
+}
+</code></pre></div></div>
+<hr />
+
+<p>time_point类也有一些运算，如下图： 
+time_point运算</p>
+
+<p>gcc4.9.0实现time_point模板类时，time_point内部有一个duration类型的成员变量。
+所以对于tp+=d和dp-=d的实现，都是直接对内部的成员变量直接调用+=，-=。所以调用者必须保证精度的正确性，否则编译出错。</p>
+
+<hr />
+
+
+  </section>
+</article>
+
+<section>
+
+            <div class="content-play">
+              <p><a href="javascript:void(0)" onclick="dashangToggle()" class="dashang" title="打赏，支持一下">打赏一个呗</a></p>
+              <div class="hide_box-play"></div>
+              <div class="shang_box-play">
+                <a class="shang_close-play" href="javascript:void(0)" onclick="dashangToggle()" title="关闭"><img src="/images/payimg/close.jpg" alt="取消" /></a>
+                <div class="shang_tit-play">
+                  <p>感谢您的支持，我会继续努力的!</p>
+                </div>
+                <div class="shang_payimg">
+                    <img src="/images/payimg/alipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+              <div class="shang_payimg">    
+                    <img src="/images/payimg/weipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+                <div class="pay_explain">扫码打赏，你说多少就多少</div>
+                <div class="shang_payselect">
+                  <div class="pay_item checked" data-id="alipay">
+                    <span class="pay_logo"><img src="/images/payimg/alipay.jpg" alt="支付宝" /></span>
+                  </div>
+                  <div class="pay_item" data-id="weipay">
+                    <span class="pay_logo"><img src="/images/payimg/wechat.jpg" alt="微信" /></span>
+                  </div>
+                </div>
+                <div class="shang_info-play">
+                  <p>打开<span id="shang_pay_txt">支付宝</span>扫一扫，即可进行扫码打赏哦</p>
+                </div>
+              </div>
+            </div>
+            <script type="text/javascript">
+            function dashangToggle(){
+              $(".hide_box-play").fadeToggle();
+              $(".shang_box-play").fadeToggle();
+            }
+            </script>
+
+            <div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';"></div>
+
+            <style type="text/css">
+              .content-play{width:80%;margin-top: 20px;margin-bottom: 10px;height:40px;}
+              .hide_box-play{z-index:999;filter:alpha(opacity=50);background:#666;opacity: 0.5;-moz-opacity: 0.5;left:0;top:0;height:99%;width:100%;position:fixed;display:none;}
+              .shang_box-play{width:540px;height:540px;padding:10px;background-color:#fff;border-radius:10px;position:fixed;z-index:1000;left:50%;top:50%;margin-left:-280px;margin-top:-280px;border:1px dotted #dedede;display:none;}
+              .shang_box-play img{border:none;border-width:0;}
+              .dashang{display:block;width:100px;margin:5px auto;height:25px;line-height:25px;padding:10px;background-color:#E74851;color:#fff;text-align:center;text-decoration:none;border-radius:10px;font-weight:bold;font-size:16px;transition: all 0.3s;}
+              .dashang:hover{opacity:0.8;padding:15px;font-size:18px;}
+              .shang_close-play{float:right;display:inline-block;
+                margin-right: 10px;margin-top: 20px;
+              }
+              .shang_logo{display:block;text-align:center;margin:20px auto;}
+              .shang_tit-play{width: 100%;height: 75px;text-align: center;line-height: 66px;color: #a3a3a3;font-size: 16px;background: url('/images/payimg/cy-reward-title-bg.jpg');font-family: 'Microsoft YaHei';margin-top: 7px;margin-right:2px;}
+              .shang_tit-play p{color:#a3a3a3;text-align:center;font-size:16px;}
+              .shang_payimg{width:140px;padding:10px;padding-left: 80px; /*border:6px solid #EA5F00;**/margin:0 auto;border-radius:3px;height:140px;display:inline-block;}
+              .shang_payimg img{display:inline-block;margin-right:10px;float:left;text-align:center;width:140px;height:140px; }
+              .pay_explain{text-align:center;margin:10px auto;font-size:12px;color:#545454;}
+              .shang_payselect{text-align:center;margin:0 auto;margin-top:40px;cursor:pointer;height:60px;width:500px;margin-left:110px;}
+              .shang_payselect .pay_item{display:inline-block;margin-right:140px;float:left;}
+              .shang_info-play{clear:both;}
+              .shang_info-play p,.shang_info-play a{color:#C3C3C3;text-align:center;font-size:12px;text-decoration:none;line-height:2em;}
+            </style>
+
+       <ul class="pager">
+        
+        <li class="previous">
+            <a href="/2016/10/ifstream%E5%92%8Ceof%E7%9A%84%E4%BD%BF%E7%94%A8/" data-toggle="tooltip" data-placement="top" title="ifstream和eof的使用">上一篇：  <span>ifstream和eof的使用</span>
+            </a>
+        </li>
+        
+        
+        <li class="next">
+            <a href="/2017/01/Cuad%E7%9A%84%E8%AE%A4%E8%AF%86/" data-toggle="tooltip" data-placement="top" title="cuda的认识">下一篇：  <span>cuda的认识</span>
+            </a>
+        </li>
+        
+    </ul>
+</section>
+
+<section class="post-comments">
+
+  
+    <div id="disqus_thread"></div>
+    <script>
+    
+    var disqus_config = function () {
+        this.page.url = "http://localhost:4000/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/";
+        this.page.identifier = "/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/";
+    };
+    var disqus_shortname = 'leopard';
+    
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>要查看<a href="http://disqus.com/?ref_noscript"> Disqus </a>评论，请启用 JavaScript</noscript>
+    
+
+  
+
+</section>
+
+
+            <section class="footer">
+    <footer>
+        <div class = "footer_div">  
+        <nav class="cover-navigation navigation--social">
+          <ul class="navigation">
+
+          
+          <!-- Github -->
+          <li class="navigation__item_social">
+            <a href="https://github.com/leopardpan" title="@leopardpan 的 Github" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/github.png);"></div>
+            </a>
+          </li>
+          
+
+          
+
+          
+
+          
+          <!-- Zhihu -->
+          <li class="navigation__item_social">
+            <a href="https://www.jianshu.com/u/2ada30d8d0f7" title="@2ada30d8d0f7" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/jianshu.png);"></div>
+            </a>
+          </li>
+
+          
+
+          
+          <!-- Weibo -->
+          <li class="navigation__item_social">
+            <a href="http://weibo.com/5366874726" title="@5366874726 的微博" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/weibo.png);"></div>
+            </a>
+          </li>
+          
+
+          
+          
+
+
+          
+          <!-- Email -->
+          <li class="navigation__item_social">
+            <a href="mailto:leopardpan@icloud.com" title="Contact me">
+              <div class="footer-social-icon" style="background:url(/images/email.png);"></div>
+            </a>
+          </li>
+          
+          
+          <!-- RSS -->
+          <li class="navigation__item_social">
+            <a href="/feed.xml" rel="author" title="RSS" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/rss.png);"></div>
+              <span class="label">RSS</span>
+            </a>
+          </li>
+
+          </ul>
+        </nav>
+
+        </div>
+
+        <div class = "footer_div">  
+           <p class="copyright text-muted">
+            Copyright &copy; wuyuchun 2020 Theme by <a href="http://leopardpan.github.io/">leopardpan</a> |
+            <iframe
+                style="margin-left: 2px; margin-bottom:-5px;"
+                frameborder="0" scrolling="0" width="91px" height="20px"
+                src="https://ghbtns.com/github-btn.html?user=leopardpan&repo=leopardpan.github.io&type=star&count=true" >
+            </iframe>
+            </p>
+        	<div align="right">
+    			<link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+          <!-- 访问统计 -->
+          <span id="busuanzi_container_site_pv">
+            本站总访问量
+            <span id="busuanzi_value_site_pv"></span>次
+          </span>
+
+        </div>
+        <div>
+    </footer>
+</section>
+
+        </div>
+    </div>
+    
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="/js/main.js"></script>
+
+<script type="text/javascript" src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+  </body>
+
+</html>

@@ -1,0 +1,120 @@
+I"�<p>[12:51 ]</p>
+
+<h1 id="简介">简介</h1>
+
+<p>传统单线程的例子</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/*
+ * 简介：用于计算一个数组中元素的和
+ * 注意：这是普通的写法
+ */
+
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+
+int main(int argc, char *argv[]){
+
+    const int N = 50000;
+
+    //!任务1 创建数组
+    std::vector&lt;int&gt; a(N);
+
+    //!任务2 填充数组
+    for(int i = 0; i &lt; N; ++i){
+        a[i] = i;
+    }
+
+    //!任务3：计算数组中里面的所有的和
+    int sum_A(0);
+    for(int i = 0; i &lt; N; ++i){
+        sum_A += a[i];
+    }
+
+    //!任务4：计算0到N-1之和
+    int sum_check(0);
+    for(int i = 0; i &lt; N; ++i){
+        sum_check += i;
+    }
+
+    //!检查任务的正确性
+    if(sum_A == sum_check){
+        std::cout &lt;&lt; "all right!" &lt;&lt; std::endl;
+    }
+    else{
+        std::cout &lt;&lt; "it's wrong!" &lt;&lt;std::endl;
+    }
+
+    return 0;
+} 
+</code></pre></div></div>
+
+<p>这个是用cuda编写的例子— <strong>这里使用的是C++ThrustAPI</strong></p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/*
+ * 简介：这个是用cuda的Thrust数据并行API的例子
+ */
+
+
+#include &lt;iostream&gt;
+using namespace std;
+
+#include &lt;thrust/reduce.h&gt;
+#include &lt;thrust/sequence.h&gt;
+#include &lt;thrust/host_vector.h&gt;
+#include &lt;thrust/device_vector.h&gt;
+
+int main(int argc, char *argv[]) {
+
+    const int N = 50000;
+
+    //!创建数组
+    thrust::device_vector&lt;int&gt; a(N);
+
+    //！填充数组 并行
+    thrust::sequence(a.begin(),a.end(),0);
+
+    //！并行计算数组元素之和
+    int sumA = thrust::reduce(a.begin(),a.end(),0);
+
+    //！测试是否异步的
+    std::cout &lt;&lt; "已经调用～～～" &lt;&lt; std::endl;
+
+
+    int sum_check(0);
+
+    //!这里主要测试 异步调用
+    #if 0
+    for(int i = 0; i &lt; N; ++i){
+        sum_check += i;
+    }
+    #endif
+    std::cout &lt;&lt; "sum_A: " &lt;&lt;sum_A &lt;&lt;std::endl;
+
+    if(sum_check == sumA) {
+        std::cout &lt;&lt;"test good!" &lt;&lt; std::endl;
+    }
+    else {
+        std::cout &lt;&lt;"test err!" &lt;&lt;std::endl;
+    }
+
+    return 0;
+} 
+</code></pre></div></div>
+
+<h1 id="cuda-api">cuda API</h1>
+<p>cuda提供了多种API，如下所示（从高层到底层）：</p>
+<ol>
+  <li>数据并行 C++ Thrust API</li>
+  <li>可用于C或者C++的Runtime API</li>
+  <li>可用于C或者C++的Driver API</li>
+</ol>
+
+<h2 id="关键点">关键点</h2>
+<p>1.用于CUDA的GPU是安装于主机系统中的独立设备。</p>
+
+<p>2.GPU运行在一个和主处理器相隔离的存储空间中。</p>
+
+<p>3.CUDA kernel是可在主机代码中调用而在CUDA设备上运行的子程序 <strong>通过__global__来定义</strong>。</p>
+
+<p>4.kernel的调用是异步的，即主机仅仅把要执行的kernel顺序提交给GPU，并不等待其执行完成，然后在直接处理后面其他的任务。</p>
+
+<p>5.GPU上的基本运行单位是线程</p>
+:ET

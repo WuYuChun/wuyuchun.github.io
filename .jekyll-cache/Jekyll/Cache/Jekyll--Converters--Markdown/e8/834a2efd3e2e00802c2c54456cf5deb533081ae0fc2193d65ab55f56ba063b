@@ -1,0 +1,58 @@
+I"�	<p>listi</p>
+
+<p>[07:24 PM]</p>
+
+<h1 id="前言">前言</h1>
+<p>glog是一个应用级别的日记系统，使用非常方便，重要的代码行为8K，下面仅仅是记录自己看glog源码时候的一些关键点。
+<a href="https://github.com/google/glog">glog链接</a></p>
+
+<h1 id="流程">流程</h1>
+<p><strong>若是设计一个日记系统，需要考虑的点有哪些？</strong></p>
+
+<blockquote>
+  <p>1.系统中当前仅当有一个日记输出，也就是说，日记的输出是顺序</p>
+</blockquote>
+
+<blockquote>
+  <p>2.输出的消息格式，以及等级</p>
+</blockquote>
+
+<blockquote>
+  <p>3.输出的日记文件，以及文件的组织</p>
+</blockquote>
+
+<hr />
+
+<p>流程如图：</p>
+
+<p><img src="http://img.blog.csdn.net/20160908194848945" alt="liucheng Image" /></p>
+
+<p><strong>其中LogMessage类是用于组织消息内容，而LogDestination是用于组织消息的载体–文件的组织</strong>，其中所谓的消息流就是通过这样写入到磁盘中的，当然
+其中代码中有很多的技巧之处。</p>
+
+<p>在实际使用中，在代码中一般用glog所定义的宏进行消息的输出，如下图：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if(count &lt; 5 ){
+    LOG(INFO) &lt;&lt; "less 5";
+}
+</code></pre></div></div>
+<p>输出的日记文件在：（linux）/tmp，类似<em>example.bin.username-MS-$$.test.log.INFO.20160908-141658.6235</em>这种，
+（window）则是在用户/appdata/tmp/。当然这个的前提是没有设置glog的输出目录，而仅仅使用默认的。</p>
+
+<h2 id="log宏">LOG（）宏</h2>
+
+<p>glog使用宏作为日记输出，这对于应用人员来说是非常方便，并且其也定义了相应的等级，根据宏的拼接，来生成LogMessage，如下图</p>
+
+<p><img src="http://img.blog.csdn.net/20160908200332370" alt="hong Image" /></p>
+
+<h2 id="组织消息的类">组织消息的类</h2>
+<p>关于消息的各个类，如下图所见，但是其中图与代码并不是一一对应，缺少一些小的细节，但是大体上是能反应关系的，其中用于<strong>C++的流的概念</strong>。
+<img src="http://img.blog.csdn.net/20160908201239180" alt="" /></p>
+
+<h2 id="组织日记文件的类">组织日记文件的类</h2>
+
+<p>这个是用于组织日记文件的类，具体的成员变量和成员函数没有给出。
+<img src="http://img.blog.csdn.net/20160910145818439" alt="destion" /></p>
+
+<h1 id="总结">总结</h1>
+:ET

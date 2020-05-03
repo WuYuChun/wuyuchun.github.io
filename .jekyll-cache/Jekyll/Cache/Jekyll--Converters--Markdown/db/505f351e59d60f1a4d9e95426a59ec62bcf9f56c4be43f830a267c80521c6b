@@ -1,0 +1,220 @@
+I"�<p>listi</p>
+
+<p>[11:59 PM]</p>
+
+<h1 id="前言">前言</h1>
+<p>对算法进行改进以求获得最佳的性能通常有两种策略：优化现有的算法，或者开发新的算法。</p>
+
+<p>优化算法的标准技术：
+1、使I/O减到最少，减少函数调用的次数，限制计算密集型操作（浮点数运算和除法运算）；
+2、确定执行得最频繁的算法元素，比如冒泡排序的比较和交换；
+3、检查可能由于疏忽导致而导致特别缓慢的的实现。这往往与查找最坏情况相似。</p>
+
+<p>I/O通常是发生在毫秒(ms)级的时间范围内，而CPU的活动一般发生在亚微秒级的范围内。因此对于算法而言，任何I/O的代价都非常高昂。
+如果不能消除I/O本身，那么可以使用缓冲区来减小它的影响。</p>
+
+<h1 id="代码">代码</h1>
+<p>下面的一个算法，就是用来测试从输入文件流infile向输出文件流outfile传输时，多少大小的缓冲区buf最合适(既可以速度达到最快，也不浪费存储空间)</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;limits.h&gt;
+#include &lt;Windows.h&gt;
+
+#undef CopyFile//取消以前定义的CopyFile（下面有重写的CopyFile()）  
+#pragma comment(lib, "kernel32.lib")//yyw  
+
+#define DEF_BUF 512  
+
+long GetCPUTime() 
+{
+	static LARGE_INTEGER li = {0};  //静态变量~~初始化一次
+	LARGE_INTEGER linow = {0};
+
+	if ( 0 == li.QuadPart)
+	{
+		QueryPerformanceFrequency(&amp;li);
+	}
+	QueryPerformanceCounter(&amp;linow);
+
+	return linow.QuadPart*1000/li.QuadPart;
+}
+
+#define get_clock_ticks(x) \
+	x = GetCPUTime()
+
+long CopyFile( char *inFileName, char *outFileName,size_t insize,size_t outsize)
+{
+	int c;
+	long starttime, donetime;
+	FILE *infile = NULL, *outfile = NULL;
+
+	if ( (infile = fopen(inFileName,"rb")) == NULL )
+	{
+		printf("Can't open %s\n",inFileName);
+		exit(1);
+	}
+
+	if ( setvbuf(infile,NULL,_IOFBF,insize))
+	{
+		printf("counld't set infile buffer to %u bytes\n",insize);
+		exit(1);
+	}
+
+	if ( (outfile = fopen(outFileName,"wb")) == NULL )
+	{
+		printf("can't open %s\n",outFileName);
+		exit(1);
+	}
+
+	if ( setvbuf(outfile,NULL,_IOFBF,outsize) )
+	{
+		printf("counld't set outfile buffer to %u bytes\n",insize);
+		exit(1);
+	}
+
+	get_clock_ticks(starttime);
+	while( (c = fgetc(infile)) != EOF )
+	{
+		fputc(c,outfile);
+	}
+	get_clock_ticks(donetime);
+	fclose(infile);
+	fclose(outfile);
+	return (donetime - starttime);
+}
+
+
+
+
+
+
+
+int main(int argc , char *argv[])
+{
+	size_t insize, outsize;
+	int i;
+	long total, average, lo, hi, elapsed;
+	insize = outsize = DEF_BUF;
+
+	if ( argc &lt;3 || argc &gt; 5 )
+	{
+		fprintf(stderr,"Usage infire!!!!!\n");
+		return (EXIT_FAILURE);
+	}
+
+	if ( argc &gt; 3)
+	{
+		insize = (unsigned)atoi(argv[3]);
+	}
+	if ( argc &gt; 4 )
+	{
+		outsize = (unsigned)atoi(argv[4]);
+	}
+
+	total = hi = 0;
+	lo = LONG_MAX;
+	for ( i = 1; ; ++i)
+	{
+		elapsed = CopyFile(argv[1],argv[2],insize,outsize);
+
+		if ( elapsed &gt; hi)
+		{
+			hi = elapsed;
+		}
+
+		if ( elapsed &lt; lo)
+		{
+			lo = elapsed;
+		}
+
+		total += elapsed;
+
+		if ( total &gt; 500 || i &gt; 4)
+		{
+			break;
+		}
+	}
+
+	average = total/i;
+
+	FILE *result = NULL;
+	result = fopen("result.txt","ab");
+	if ( NULL == result )
+	{
+		exit(EXIT_FAILURE);
+	}
+	fprintf(result,"Average of %4ld ticks (%4ld - %4ld).Insize = %5u. Outsize = %5u.\n",
+		average, lo, hi, insize, outsize );
+
+	return ( EXIT_SUCCESS );  
+
+
+}
+
+</code></pre></div></div>
+
+<h1 id="关键函数">关键函数</h1>
+<p>##QueryPerformanceFrequency() - 基本介绍
+类型：Win32API
+原型：BOOL QueryPerformanceFrequency(LARGE_INTEGER *lpFrequency);
+作用：返回硬件支持的高精度计数器的频率。
+返回值：非零，硬件支持高精度计数器；零，硬件不支持，读取失败。
+##QueryPerformanceFrequency() - 技术特点
+供WIN9X使用的高精度定时器：QueryPerformanceFrequency()和QueryPerformanceCounter()，要求计算机从硬件上支持高精度定时器。
+函数的原形是：
+　　BOOL QueryPerformanceFrequency(LARGE_INTEGER *lpFrequency);
+　　BOOL QueryPerformanceCounter (LARGE_INTEGER *lpCount);
+数据类型LARGEINTEGER既可以是一个作为8字节长的整数，也可以是作为两个4字节长的整数的联合结构，其具体用法根据编译器是否支持64位而定。该类型的定义如下：
+　　typeef union _ LARGE_INTEGER
+　　{
+　　 struct
+　　 {
+　　 DWORD LowPart;
+　　 LONG HighPart;
+　　 };
+　　 LONGLONG QuadPart;
+　　} LARGE_INTEGER;
+在定时前应该先调用QueryPerformanceFrequency()函数获得机器内部计时器的时钟频率。接着在需要严格计时的事件发生前和发生之后分别调用QueryPerformanceCounter()，利用两次获得的计数之差和时钟频率，就可以计算出事件经历的精确时间。</p>
+
+<h1 id="运行结果">运行结果</h1>
+<p><img src="http://img.blog.csdn.net/20150419011658409" alt="这里写图片描述" />
+<img src="http://img.blog.csdn.net/20150418235554523" alt="这里写图片描述" /></p>
+
+<p><strong>运行结果的图使用Python解析所获取的结果所画！</strong>
+python代码如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import string
+import matplotlib.pyplot as plt  
+import numpy as np
+import re
+
+if __name__ == '__main__':   
+    
+     size = []
+     time = []
+     
+     file = open(r'result.txt','r')
+     lineList = file.readlines()
+     for element in lineList:
+         m = re.findall(r'(\w*[0-9]+)\w*', element)
+         #print(m)
+         time.append(m[0])
+         size.append(m[3])
+         
+     #print(size)
+     #print(time)
+    
+     plt.plot(size, time, 'b*')
+     plt.plot(size, time, 'r')
+   
+     plt.ylim(0, 100)
+     plt.xlim(0,2058)
+     plt.title('Better Bufsize')
+     plt.legend()
+     plt.show()
+</code></pre></div></div>
+
+<h1 id="结论">结论</h1>
+<p>当设置的缓冲区大小为1024的时候，已经是最少，及时后面一直在增加缓冲区的大小，也不能给性能带来提升的。</p>
+:ET

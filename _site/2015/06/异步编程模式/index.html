@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <title>异步编程模式</title>
+  <meta name="description" content="listi">
+  <meta name="author" content="leopardpan">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="异步编程模式">
+  <meta name="twitter:description" content="listi">
+  
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="异步编程模式">
+  <meta property="og:description" content="listi">
+  
+  <link rel="icon" type="image/png" href="/images/favicon.png" />
+  <link href="/images/favicon.png" rel="shortcut icon" type="image/png">
+  
+  <link rel="stylesheet" href="/css/main.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="canonical" href="http://localhost:4000/2015/06/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%BC%8F/">
+  <link rel="alternate" type="application/rss+xml" title="wuyuchun" href="http://localhost:4000/feed.xml">
+  
+  <meta name="google-site-verification" content="1-1ZlHoRvM0T2FqPbW2S-qLgYXN6rsn52kErlMPd_gw" />
+
+<!-- 站点统计 -->
+  <script 
+  async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js">
+  </script>  
+
+<!-- 百度统计 -->
+  
+  <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "//hm.baidu.com/hm.js?xxxx";
+        var s = document.getElementsByTagName("script")[0]; 
+        s.parentNode.insertBefore(hm, s);
+      })();
+  </script>
+  
+
+<!-- google 统计 -->
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      ga('create', 'xxxx', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-9005224472374751",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+
+  <body>
+
+    <span class="mobile btn-mobile-menu">        
+      <div class="nav_container">
+         <nav class="nav-menu-item" style = "float:right">
+            <i class="nav-menu-item">
+              <a href="/#blog" title="" class="blog-button">  博客主页
+              </a>
+            </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/archive" title="archive" class="btn-mobile-menu__icon">
+                      所有文章
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/tags" title="tags" class="btn-mobile-menu__icon">
+                      标签
+                  </a>
+                </i>
+            
+                <i class="nav-menu-item">
+
+                  <a href="/about" title="about" class="btn-mobile-menu__icon">
+                      关于我
+                  </a>
+                </i>
+            
+          </nav>
+      </div>
+    </span>
+    
+    <header class="panel-cover panel-cover--collapsed" style="background-image: url('/images/background-cover.jpg')">
+  <div class="panel-main">
+
+    <div class="panel-main__inner panel-inverted">
+    <div class="panel-main__content">
+        <!-- 头像效果-start -->
+        <div class="ih-item circle effect right_to_left">            
+            <a href="/#blog" title="前往 wuyuchun 的主页" class="blog-button">
+                <div class="img"><img src="/images/avatar.jpg" alt="img"></div>
+                <div class="info">
+                    <div class="info-back">
+                        <h2> 
+                            
+                                messi
+                            
+                        </h2>
+                        <p>
+                           
+                                机器学习/ 优化师
+                            
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- 头像效果-end -->
+        <h1 class="panel-cover__title panel-title"><a href="/#blog" title="link to homepage for wuyuchun" class="blog-button">wuyuchun</a></h1>
+        
+        <span class="panel-cover__subtitle panel-subtitle">个人站</span>
+        
+        <hr class="panel-cover__divider" />
+        <p class="panel-cover__description">欢迎来到我的个人站~</p>
+        <hr class="panel-cover__divider panel-cover__divider--secondary" />
+        
+        
+        
+
+        <div class="navigation-wrapper">
+          <div>
+            <nav class="cover-navigation cover-navigation--primary">
+              <ul class="navigation">
+                <li class="navigation__item"><a href="/#blog" title="" class="blog-button">博客主页</a></li>
+                
+                  <li class="navigation__item"><a href="/archive" title="archive">所有文章</a></li>
+                
+                  <li class="navigation__item"><a href="/tags" title="tags">标签</a></li>
+                
+                  <li class="navigation__item"><a href="/about" title="about">关于我</a></li>
+                
+              </ul>
+            </nav>
+          </div>          
+        </div>
+
+
+        </div>
+      </div>
+    </div>
+    
+    
+    <div class="panel-cover--overlay cover-clear"></div>
+    
+  </div>
+</header>
+
+
+    <div class="content-wrapper">
+        <div class="content-wrapper__inner">
+            <article class="post-container post-container--single" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title">异步编程模式</h1>
+    <div class="post-meta">
+      <img src="/images/calendar.png" width="20px"/> 
+      <time datetime="2015-06-11 20:18:00 +0800" itemprop="datePublished" class="post-meta__date date">2015-06-11</time>  
+         
+      <span id="busuanzi_container_page_pv"> | 阅读：<span id="busuanzi_value_page_pv"></span>次</span>
+    </p>
+    </div>
+  </header>
+
+  <section class="post">
+    <p>listi</p>
+
+<p>[8:18 PM]</p>
+
+<h1 id="1异步编程模式的好处">1、异步编程模式的好处</h1>
+<p>在编写程序的时候，往往会写出下面这样的程序：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int main( int argc , char *argv[])
+{
+	...
+	int iRet1 = Func1();
+	int iRet2 = Func2();
+	int iRet3 = Func3();
+	...
+}
+</code></pre></div></div>
+
+<p>在程序执行的时候，<strong>必须等到Func1()执行返回后，才能继续执行下面的语句</strong>，若Func1()是一个耗时间的操作，那么main线程将会不对其他的操作进行响应。其实很多的人的想法，就是另起一个线程执行该Func1函数。不让其阻塞主线程的执行。good！很好的想法，下面对其进行进一步的分析。</p>
+
+<h3 id="1同步模型">（1）同步模型</h3>
+<p>下面的图就是上面执行流程的描述：
+                         <img src="http://img.blog.csdn.net/20150611200824549" alt="这里写图片描述" />
+这是最简单的编程方式。 在一个时刻， 只能有一个任务在执行， 并且前一个任务结束后一个任务才能开始。 如果任务都能按照事先规定好的顺序执行， 最后一个任务的完成意味着前面所有的任务都已无任何差错地完成并输出其可用的结果—这是多么简单的逻辑。</p>
+
+<h3 id="2多线程模型">（2）多线程模型</h3>
+<p>下面的图就是多线程模型执行的描述（符合上面的讨论）： 
+<img src="http://img.blog.csdn.net/20150611201233661" alt="这里写图片描述" />
+在这个模型中，每个任务都在单独的线程中完成。 这些线程都是由操作系统来管理， 若在多处理机、 多核处理机的系统中可能会相互独立的运行， 若在单处理机上， 则会交错运行。 关键点在于，在线程模式中，具体哪个任务执行由操作系统来处理。 但编程人员 则只需简单地认为： 它们的指令流是相互独立且可以并行执行。 虽然，从图示看起来很简单， 实际上多线程编程是很麻烦的，任务之间的要通信就要是线程之间的通信。 线程间的通信那不是一般的复杂。 什么邮槽、 通道、共享内存等.</p>
+
+<h3 id="3异步编程模型">（3）异步编程模型</h3>
+<p>下面的图就是异步编程模型执行的描述：
+<img src="http://img.blog.csdn.net/20150611201808044" alt="这里写图片描述" />
+<strong>在这个模型中，任务是交错完成，值得注意的是： 这是在单线程的控制下。 这要比多线程模型简单多了，因为编程人员总可以认为只有一个任务在执行， 而其它的在停止状态。 虽然在单处理机系统中， 线程也是像图 3那样交替进行。 但作为程序员在使用多线程时， 仍然需要使用图 2而不是图 3的来思考问题，以防止程序在挪到多处理机的系统上无法正常运行（考虑到兼容性）。但单线程的异步程序不管是在单处理机还是在多处理机上都能很好的运行。在异步编程模型与多线程模型之间 还有一个不同： 在多线程程序中，对于停止某个线程启动另外一个线程， 其决定权并不在程序员 手里而在操作系统那里，因此，程序员在编写程序过程中必须要假设在任何时候一个线程都有可能被停止而启动另外一个线程。 相反， 在异步模型中， 一个任务要想运行必须显式放弃当前运行的任务的控制权。 这也是相比多线程模型来说，最简洁的地方。 值得注意的是： 将异步编程模型与同步模型混合在同一个系统中是可以的。 但在介绍中的绝大多数时候， 我们只研究在单个线程中的异步编程模型。</strong></p>
+
+<p>上面已经介绍了三种模型，总结起来就是：异步编程模式比多线程模型简单在于其单指令流与显示地放弃对任务的控制权而不是被操作系统随机地停止，但是异步模型要比同步模型复杂就在于，程序员必须将任务组织成序列来交替的小步完成，因此若其中一个任务用到另一个任务的输出，则依赖的任务（即接收输出的任务）需要被设计为要接收系列比特或者分片而不是一下全部接收。</p>
+
+<h1 id="2异步编程模型应用的场景">2、异步编程模型应用的场景</h1>
+<p>与同步模型相比， 异步模型的优势在如下情况下会得到发挥：</p>
+
+<ol>
+  <li>有大量的任务， 以至于可以认为在一个时刻至少有一个任务要运行</li>
+  <li>任务执行大量的I/O操作， 这样同步模型就会在因为任务阻塞而浪费 大量的时间</li>
+  <li>任务之间 相互独立， 以至于任务内部的交互很少。</li>
+</ol>
+
+<p>这些条件大多在CS模式中的网络比较繁忙的服务器端出现（如WEB服务器） 。 每个任务代表一个客户端进行接收请求并回复的I/O操作。 客户的请求（相当于读操作） 都是相互独立的。 因此一个网络服务是异步模型的典型代表。</p>
+
+
+  </section>
+</article>
+
+<section>
+
+            <div class="content-play">
+              <p><a href="javascript:void(0)" onclick="dashangToggle()" class="dashang" title="打赏，支持一下">打赏一个呗</a></p>
+              <div class="hide_box-play"></div>
+              <div class="shang_box-play">
+                <a class="shang_close-play" href="javascript:void(0)" onclick="dashangToggle()" title="关闭"><img src="/images/payimg/close.jpg" alt="取消" /></a>
+                <div class="shang_tit-play">
+                  <p>感谢您的支持，我会继续努力的!</p>
+                </div>
+                <div class="shang_payimg">
+                    <img src="/images/payimg/alipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+              <div class="shang_payimg">    
+                    <img src="/images/payimg/weipayimg.jpg" alt="扫码支持" title="扫一扫" />
+                </div>
+                <div class="pay_explain">扫码打赏，你说多少就多少</div>
+                <div class="shang_payselect">
+                  <div class="pay_item checked" data-id="alipay">
+                    <span class="pay_logo"><img src="/images/payimg/alipay.jpg" alt="支付宝" /></span>
+                  </div>
+                  <div class="pay_item" data-id="weipay">
+                    <span class="pay_logo"><img src="/images/payimg/wechat.jpg" alt="微信" /></span>
+                  </div>
+                </div>
+                <div class="shang_info-play">
+                  <p>打开<span id="shang_pay_txt">支付宝</span>扫一扫，即可进行扫码打赏哦</p>
+                </div>
+              </div>
+            </div>
+            <script type="text/javascript">
+            function dashangToggle(){
+              $(".hide_box-play").fadeToggle();
+              $(".shang_box-play").fadeToggle();
+            }
+            </script>
+
+            <div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';"></div>
+
+            <style type="text/css">
+              .content-play{width:80%;margin-top: 20px;margin-bottom: 10px;height:40px;}
+              .hide_box-play{z-index:999;filter:alpha(opacity=50);background:#666;opacity: 0.5;-moz-opacity: 0.5;left:0;top:0;height:99%;width:100%;position:fixed;display:none;}
+              .shang_box-play{width:540px;height:540px;padding:10px;background-color:#fff;border-radius:10px;position:fixed;z-index:1000;left:50%;top:50%;margin-left:-280px;margin-top:-280px;border:1px dotted #dedede;display:none;}
+              .shang_box-play img{border:none;border-width:0;}
+              .dashang{display:block;width:100px;margin:5px auto;height:25px;line-height:25px;padding:10px;background-color:#E74851;color:#fff;text-align:center;text-decoration:none;border-radius:10px;font-weight:bold;font-size:16px;transition: all 0.3s;}
+              .dashang:hover{opacity:0.8;padding:15px;font-size:18px;}
+              .shang_close-play{float:right;display:inline-block;
+                margin-right: 10px;margin-top: 20px;
+              }
+              .shang_logo{display:block;text-align:center;margin:20px auto;}
+              .shang_tit-play{width: 100%;height: 75px;text-align: center;line-height: 66px;color: #a3a3a3;font-size: 16px;background: url('/images/payimg/cy-reward-title-bg.jpg');font-family: 'Microsoft YaHei';margin-top: 7px;margin-right:2px;}
+              .shang_tit-play p{color:#a3a3a3;text-align:center;font-size:16px;}
+              .shang_payimg{width:140px;padding:10px;padding-left: 80px; /*border:6px solid #EA5F00;**/margin:0 auto;border-radius:3px;height:140px;display:inline-block;}
+              .shang_payimg img{display:inline-block;margin-right:10px;float:left;text-align:center;width:140px;height:140px; }
+              .pay_explain{text-align:center;margin:10px auto;font-size:12px;color:#545454;}
+              .shang_payselect{text-align:center;margin:0 auto;margin-top:40px;cursor:pointer;height:60px;width:500px;margin-left:110px;}
+              .shang_payselect .pay_item{display:inline-block;margin-right:140px;float:left;}
+              .shang_info-play{clear:both;}
+              .shang_info-play p,.shang_info-play a{color:#C3C3C3;text-align:center;font-size:12px;text-decoration:none;line-height:2em;}
+            </style>
+
+       <ul class="pager">
+        
+        <li class="previous">
+            <a href="/2015/06/C++%E4%B9%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E8%AF%86%E5%88%AB%E7%B1%BB%E5%9E%8B/" data-toggle="tooltip" data-placement="top" title="C++之运行时识别类型">上一篇：  <span>C++之运行时识别类型</span>
+            </a>
+        </li>
+        
+        
+        <li class="next">
+            <a href="/2015/06/ACE%E4%B8%AD%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA%E5%92%8C%E7%AE%A1%E7%90%86/" data-toggle="tooltip" data-placement="top" title="ACE中线程的创建和管理">下一篇：  <span>ACE中线程的创建和管理</span>
+            </a>
+        </li>
+        
+    </ul>
+</section>
+
+<section class="post-comments">
+
+  
+    <div id="disqus_thread"></div>
+    <script>
+    
+    var disqus_config = function () {
+        this.page.url = "http://localhost:4000/2015/06/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%BC%8F/";
+        this.page.identifier = "/2015/06/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%BC%8F/";
+    };
+    var disqus_shortname = 'leopard';
+    
+    (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>要查看<a href="http://disqus.com/?ref_noscript"> Disqus </a>评论，请启用 JavaScript</noscript>
+    
+
+  
+
+</section>
+
+
+            <section class="footer">
+    <footer>
+        <div class = "footer_div">  
+        <nav class="cover-navigation navigation--social">
+          <ul class="navigation">
+
+          
+          <!-- Github -->
+          <li class="navigation__item_social">
+            <a href="https://github.com/leopardpan" title="@leopardpan 的 Github" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/github.png);"></div>
+            </a>
+          </li>
+          
+
+          
+
+          
+
+          
+          <!-- Zhihu -->
+          <li class="navigation__item_social">
+            <a href="https://www.jianshu.com/u/2ada30d8d0f7" title="@2ada30d8d0f7" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/jianshu.png);"></div>
+            </a>
+          </li>
+
+          
+
+          
+          <!-- Weibo -->
+          <li class="navigation__item_social">
+            <a href="http://weibo.com/5366874726" title="@5366874726 的微博" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/weibo.png);"></div>
+            </a>
+          </li>
+          
+
+          
+          
+
+
+          
+          <!-- Email -->
+          <li class="navigation__item_social">
+            <a href="mailto:leopardpan@icloud.com" title="Contact me">
+              <div class="footer-social-icon" style="background:url(/images/email.png);"></div>
+            </a>
+          </li>
+          
+          
+          <!-- RSS -->
+          <li class="navigation__item_social">
+            <a href="/feed.xml" rel="author" title="RSS" target="_blank">
+              <div class="footer-social-icon" style="background:url(/images/rss.png);"></div>
+              <span class="label">RSS</span>
+            </a>
+          </li>
+
+          </ul>
+        </nav>
+
+        </div>
+
+        <div class = "footer_div">  
+           <p class="copyright text-muted">
+            Copyright &copy; wuyuchun 2020 Theme by <a href="http://leopardpan.github.io/">leopardpan</a> |
+            <iframe
+                style="margin-left: 2px; margin-bottom:-5px;"
+                frameborder="0" scrolling="0" width="91px" height="20px"
+                src="https://ghbtns.com/github-btn.html?user=leopardpan&repo=leopardpan.github.io&type=star&count=true" >
+            </iframe>
+            </p>
+        	<div align="right">
+    			<link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+          <!-- 访问统计 -->
+          <span id="busuanzi_container_site_pv">
+            本站总访问量
+            <span id="busuanzi_value_site_pv"></span>次
+          </span>
+
+        </div>
+        <div>
+    </footer>
+</section>
+
+        </div>
+    </div>
+    
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="/js/main.js"></script>
+
+<script type="text/javascript" src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+  </body>
+
+</html>

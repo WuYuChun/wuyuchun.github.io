@@ -1,0 +1,247 @@
+I" <p>listi</p>
+
+<p>[10:22 PM]</p>
+
+<h1 id="关于拷贝构造函数那点事">关于拷贝构造函数那点事</h1>
+<p>C++很杂，很庞大，其中有一个概念是非常重要的（之一）——拷贝构造函数，想当初的时候，对于它理解不够，造成各种bug。其实拷贝构造函数的基础是引用。</p>
+
+<h2 id="先了解c的传值方式">先了解C的传值方式</h2>
+<p>先上代码：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>int f (int x, char c);
+int g = f (a,b);
+</code></pre></div></div>
+<p>汇编后（简化）</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>push b
+push a
+call f ( )
+add sp,4
+mov g, register a
+</code></pre></div></div>
+<p>（为什么是push b ，可以看看C 函数调用约定！堆栈！在C和C + +中，参数是从右向左进栈，然后调用函数，调用代码负责清理栈中的参数（这
+一点说明了 add sp,4的作用） 
+上面用的都是编译器内置的类型，所以编译器很好的工作，若是一种编译器不知的类型呢？</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>struct big{
+	char buf[100];
+	int i;
+	long d;
+} B ,B2;
+
+big bigfun(big b)
+{
+	b.i = 100;
+	return b ;
+}
+int main(void)
+{
+	B2 = bigfun(B);
+	return 0;
+}
+</code></pre></div></div>
+<p>汇编后的代码
+00DF1438  sub         esp,6Ch<br />
+00DF143B  mov         ecx,1Bh<br />
+00DF1440  mov         esi,offset B (0DF7138h)<br />
+00DF1445  mov         edi,esp<br />
+00DF1447  rep movs    dword ptr es:[edi],dword ptr [esi]<br />
+00DF1449  lea         eax,[ebp-134h]<br />
+00DF144F  push        eax<br />
+00DF1450  call        bigfun (0DF10DCh)<br />
+00DF1455  add         esp,70h<br />
+00DF1458  mov         ecx,1Bh<br />
+00DF145D  mov         esi,eax<br />
+00DF145F  lea         edi,[ebp-1A8h]<br />
+00DF1465  rep movs    dword ptr es:[edi],dword ptr [esi]<br />
+00DF1467  mov         ecx,1Bh<br />
+00DF146C  lea         esi,[ebp-1A8h]<br />
+00DF1472  mov         edi,offset B2 (0DF71A8h)<br />
+00DF1477  rep movs    dword ptr es:[edi],dword ptr [esi]<br />
+上面大概的流程：
+函数参数
+返回地址
+局部变量</p>
+
+<p><strong>看把返回值的地址像一个函数参数一样压栈，让函数直接把返回值信息拷贝到目的地。</strong></p>
+
+<h2 id="若c中对象使用这种形式呢">若C++中对象使用这种形式呢？</h2>
+
+<p>class howmany
+{
+static int object_cout;</p>
+
+<p>public:</p>
+
+<p>howmany();
+~howmany();
+static void printf(const char *msg);
+};</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+</code></pre></div></div>
+<p>/#include “howmany.h”
+/#include <fstream></fstream></p>
+
+<p>std::ofstream out(“hownamy.out”);</p>
+
+<p>howmany::howmany()
+{
+++object_cout;
+}</p>
+
+<p>howmany::~howmany()
+{
+–object_cout;
+}</p>
+
+<p>void howmany::printf(const char *msg)
+{
+if ( msg )
+{
+out«msg«”: “;
+}
+out«“object_cout = “«object_cout«std::endl;
+}</p>
+
+<p>int howmany::object_cout = 0;</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+</code></pre></div></div>
+<p>howmany f(howmany x)
+{
+x.printf(“x argume inside f()”);
+return x;
+}</p>
+
+<p>int main(void)
+{
+howmany h;
+howmany::printf(“after cunst of h”);
+howmany h2 = f(h);
+howmany::printf(“after call to f()”);
+return 0;
+}</p>
+
+<p>结果是：
+after cunst of h: object_cout = 1
+x argume inside f(): object_cout = 1
+after call to f(): object_cout = 0</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+**编译器假定我们想使用位拷贝（ b i t c o p y）来创建对象。在许多情况下，这是可行的。但在h o w m a n y类中就行不通，因为初始化不仅仅是简单的拷贝。如果类中含有指针又将出现问题：它们指向什么内容，是否拷贝它们或它们是否与一些新的内存块相连？**
+
+
+## 拷贝构造函数
+
+防止编译器进行位拷贝 ( b i t c o p y )。每当编译器需要从现有的对象创建新对象时，我们可以通过定义我们自己的函数做这些事。因为我们是在
+创建新对象，所以，这个函数应该是构造函数，并且传递给这个函数的单一参数必须是我们创立的对象的源对象。但是这个对象不能传入构造函数，因为我们试图定义处理传值方式的函数按句法构造传递一个指针是没有意义的，毕竟我们正在从现有的对象创建新对象。这里，引用就起作用了，可以使用源对象的引用。这个函数被称为拷贝构造函数，它经常被提及为 X ( X &amp; )（它是被称为 X的类的外在表现）。
+	如果设计了拷贝构造函数，当从现有的对象创建新对象时，编译器将不使用位拷贝( b i t c o p y )。编译器总是调用我们的拷贝构造函数。所以，如果我们没有设计拷贝函数，编译器将做一些判断，但我们完全可以接管这个过程的控制。
+**位拷贝拷贝的是地址，而值拷贝则拷贝的是内容。**
+
+继续码上代码：
+
+</code></pre></div></div>
+<p>#include <string>
+#include <fstream>
+std::ofstream out("howmany2.out");
+class howmany2
+{
+	enum{ bufsize = 30};
+	char id[bufsize];
+	static int object_cout;
+public:
+	howmany2(const char *ID)
+	{
+		if (ID)
+		{
+			std::strncpy(id,ID,bufsize);
+		}
+		else
+		{
+			*id = 0;
+		}
+		++object_cout;
+		print("hownamy2()");
+	}</fstream></string></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>howmany2(const howmany2 &amp;h)
+{
+	std::strncpy(id,h.id,bufsize);
+	std::strncat(id,"copy",bufsize-std::strlen(id));
+	++object_cout;
+	print("hownamy2(howmany2 &amp;)");
+}
+
+void print(const char *msg)
+{
+	if ( msg)
+	{
+		out&lt;&lt;msg&lt;&lt;std::endl;
+	}
+	out&lt;&lt;'\t'&lt;&lt;id&lt;&lt;": "&lt;&lt;"object_count = "&lt;&lt;object_cout&lt;&lt;std::endl;
+}
+~howmany2()
+{
+	--object_cout;
+	print("~hownamy2()");
+} };
+</code></pre></div></div>
+
+<p>int howmany2::object_cout = 0;</p>
+
+<p>howmany2 func( howmany2 &amp;x)
+{
+	x.print(“x arument inside f()”);
+	out« “return from f()”«std::endl;
+	return x;
+}
+int main(void)
+{
+	howmany2 h(“h”);
+	out«“entering f()”«std::endl;
+	howmany2 h2 = f(h);
+	h2.print(“h2 after call f()”);
+	out«“call f(),no return value!”«std::endl;
+	f(h);
+	out«“after call to f()”«std::endl;
+	return 0;
+}
+```
+结果：
+hownamy2()
+	h: object_count = 1
+entering f()
+hownamy2(howmany2 &amp;)
+	hcopy: object_count = 2
+x argume inside f()
+	hcopy: object_count = 2
+hownamy2(howmany2 &amp;)
+	hcopycopy: object_count = 3
+~hownamy2()
+	hcopy: object_count = 2
+h2 after call f()
+	hcopycopy: object_count = 2
+call f(),no return value!
+hownamy2(howmany2 &amp;)
+	hcopy: object_count = 3
+x argume inside f()
+	hcopy: object_count = 3
+hownamy2(howmany2 &amp;)
+	hcopycopy: object_count = 4
+~hownamy2()
+	hcopy: object_count = 3
+~hownamy2()
+	hcopycopy: object_count = 2
+after call to f()
+~hownamy2()
+	hcopycopy: object_count = 1
+~hownamy2()
+	h: object_count = 0</p>
+
+<p>针对上面的结果，就不做具体的分析了，留给自己分析！
+（提示：注意临时变量哦！）</p>
+
+<h2 id="结论">结论</h2>
+<p>现在，我们可能已头晕了。我们可能想，怎样才能不必了解拷贝构造函数就能写一个具有一定功能的类。但是我们别忘了：仅当准备用传值的方式传递类对象时，才需要拷贝构造函数。如果不需要这么做，就不要拷贝构造函数。
+我们也许会说： “如果我自己不写拷贝构造函数，编译器将为我创建。所以，我怎么能保证一个对象永远不会被通过传值方式传递呢？”
+有一个简单的技术防止通过传值方式传递：声明一个私有（ p r i v a t e）拷贝构造函数。我们甚至不必去定义它，除非我们的成员函数或友元（ f r i e n d）函数需要执行传值方式的传递。如果用户试图用传值方式传递或返回对象，编译器将会发出一个出错信息。这是因为拷贝构造函
+数是私有的。因为我们已显式地声明我们接管了这项工作，所以编译器不再创建缺省的拷贝构造函数。</p>
+:ET

@@ -1,0 +1,28 @@
+I"�<p>listi</p>
+
+<p>[9:11 PM]</p>
+
+<h1 id="前言">前言</h1>
+<p>使用winsock2.h编译后出现一些奇葩的错误</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(112) : error C2011: “fd_set”:“struct”类型重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(54) : 参见“fd_set”的声明
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(147) : warning C4005: “FD_SET”:宏重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(88) : 参见“FD_SET”的前一个定义
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(156) : error C2011: “tim”:“struct”类型重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(97) : 参见“tim”的声明
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(212) : error C2011: “hostent”:“struct”类型重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(153) : 参见“hostent”的声明
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(225) : error C2011: “netent”:“struct”类型重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(166) : 参见“netent”的声明
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(232) : error C2011: “servent”:“struct”类型重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(173) : 参见“servent”的声明
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(244) : error C2011: “protoent”:“struct”类型重定义
+       c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock.h(185) : 参见“protoent”的声明
+c:\program files\microsoft visual studio8\vc\platformsdk\include\winsock2.h(400) : error C2011:“sockaddr_in”: “struct”类型重定义
+</code></pre></div></div>
+
+<h1 id="解决方法">解决方法</h1>
+<p>在预处理器中增加一个宏定义
+<strong>WIN32_LEAN_AND_MEAN</strong></p>
+:ET
