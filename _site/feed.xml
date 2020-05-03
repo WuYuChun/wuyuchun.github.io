@@ -1,0 +1,1606 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom"><generator uri="http://jekyllrb.com" version="3.2.1">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2016-09-11T15:43:17+08:00</updated><id>/</id><title>西电托儿所</title><subtitle>随心</subtitle><entry><title>glog源码（2）</title><link href="/glog%E6%BA%90%E7%A0%81-2/" rel="alternate" type="text/html" title="glog源码（2）" /><published>2016-09-10T15:40:00+08:00</published><updated>2016-09-10T15:40:00+08:00</updated><id>/glog源码（2）</id><content type="html" xml:base="/glog%E6%BA%90%E7%A0%81-2/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;前言&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;原理&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-2&quot; id=&quot;markdown-toc-section-2&quot;&gt;结论&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[15:40 ]&lt;/p&gt;
+
+&lt;h1 id=&quot;section&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;前面大概讲解一下glog的关键类，下面将会针对与LogMessage类。以下代码由于glog进行裁剪过来的。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//用于输出消息，当写满消息后，调用析构函数，使用Flush
+class GOOGLE_GLOG_DLL_DECL LogMessage {
+public:
+  enum {
+    kNoLogPrefix = -1
+  };
+
+  class GOOGLE_GLOG_DLL_DECL LogStream : public std::ostream {
+
+  public:
+    LogStream(char *buf, int len, int ctr)
+        : std::ostream(NULL),
+          streambuf_(buf, len),
+          ctr_(ctr),
+          self_(this) {
+      rdbuf(&amp;amp;streambuf_);
+    }
+
+    int ctr() const { return ctr_; }
+    void set_ctr(int ctr) { ctr_ = ctr; }
+    LogStream* self() const { return self_; }
+
+    // Legacy std::streambuf methods.
+    size_t pcount() const { return streambuf_.pcount(); }
+    char* pbase() const { return streambuf_.pbase(); }
+    char* str() const { return pbase(); }
+
+  private:
+    LogStream(const LogStream&amp;amp;);  //！对象语义 而不是值语义
+    LogStream&amp;amp; operator=(const LogStream&amp;amp;); //！对象语义 而不是值语义
+    base_logging::LogStreamBuf streambuf_;
+    int ctr_;  // Counter hack (for the LOG_EVERY_X() macro)
+    LogStream *self_;  // Consistency check hack
+  };
+
+public:
+  // icc 8 requires this typedef to avoid an internal compiler error.
+  typedef void (LogMessage::*SendMethod)();
+
+  LogMessage(const char* file, int line, LogSeverity severity, int ctr,
+             SendMethod send_method);
+
+  // Two special constructors that generate reduced amounts of code at
+  // LOG call sites for common cases.
+
+  // Used for LOG(INFO): Implied are:
+  // severity = INFO, ctr = 0, send_method = &amp;amp;LogMessage::SendToLog.
+  //
+  // Using this constructor instead of the more complex constructor above
+  // saves 19 bytes per call site.
+  LogMessage(const char* file, int line);
+
+  // Used for LOG(severity) where severity != INFO.  Implied
+  // are: ctr = 0, send_method = &amp;amp;LogMessage::SendToLog
+  //
+  // Using this constructor instead of the more complex constructor above
+  // saves 17 bytes per call site.
+  LogMessage(const char* file, int line, LogSeverity severity);
+
+  // Constructor to log this message to a specified sink (if not NULL).
+  // Implied are: ctr = 0, send_method = &amp;amp;LogMessage::SendToSinkAndLog if
+  // also_send_to_log is true, send_method = &amp;amp;LogMessage::SendToSink otherwise.
+  LogMessage(const char* file, int line, LogSeverity severity, LogSink* sink,
+             bool also_send_to_log);
+
+  // Constructor where we also give a vector&amp;lt;string&amp;gt; pointer
+  // for storing the messages (if the pointer is not NULL).
+  // Implied are: ctr = 0, send_method = &amp;amp;LogMessage::SaveOrSendToLog.
+  LogMessage(const char* file, int line, LogSeverity severity,
+             std::vector&amp;lt;std::string&amp;gt;* outvec);
+
+  // Constructor where we also give a string pointer for storing the
+  // message (if the pointer is not NULL).  Implied are: ctr = 0,
+  // send_method = &amp;amp;LogMessage::WriteToStringAndLog.
+  LogMessage(const char* file, int line, LogSeverity severity,
+             std::string* message);
+
+  // A special constructor used for check failures
+  LogMessage(const char* file, int line, const CheckOpString&amp;amp; result);
+
+  ~LogMessage();
+
+  // Flush a buffered message to the sink set in the constructor.  Always
+  // called by the destructor, it may also be called from elsewhere if
+  // needed.  Only the first call is actioned; any later ones are ignored.
+  void Flush();
+
+  // An arbitrary limit on the length of a single log message.  This
+  // is so that streaming can be done more efficiently.
+  static const size_t kMaxLogMessageLen;
+
+  // Theses should not be called directly outside of logging.*,
+  // only passed as SendMethod arguments to other LogMessage methods:
+  void SendToLog();  // Actually dispatch to the logs
+  void SendToSyslogAndLog();  // Actually dispatch to syslog and the logs
+
+  // Call abort() or similar to perform LOG(FATAL) crash.
+  static void  Fail();
+
+  std::ostream&amp;amp; stream();
+
+  int preserved_errno() const;
+
+  // Must be called without the log_mutex held.  (L &amp;lt; log_mutex)
+  static int64 num_messages(int severity);
+
+  struct LogMessageData;
+
+private:
+  // Fully internal SendMethod cases:
+  void SendToSinkAndLog();  // Send to sink if provided and dispatch to the logs
+  void SendToSink();  // Send to sink if provided, do nothing otherwise.
+
+  // Write to string if provided and dispatch to the logs.
+  void WriteToStringAndLog();
+
+  void SaveOrSendToLog();  // Save to stringvec if provided, else to logs
+
+  void Init(const char* file, int line, LogSeverity severity,
+            void (LogMessage::*send_method)());
+
+  // Used to fill in crash information during LOG(FATAL) failures.
+  void RecordCrashReason(glog_internal_namespace_::CrashReason* reason);
+
+  // Counts of messages sent at each priority:
+  static int64 num_messages_[NUM_SEVERITIES];  // under log_mutex
+
+  // We keep the data in a separate struct so that each instance of
+  // LogMessage uses less stack space.
+  LogMessageData* allocated_;
+  LogMessageData* data_;
+
+  friend class LogDestination;
+
+  LogMessage(const LogMessage&amp;amp;); //！对象语义 而不是值语义
+  void operator=(const LogMessage&amp;amp;);//！对象语义 而不是值语义
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从源码中，LogMessage有很多的构造函数。&lt;strong&gt;在源码中有说明最好不要使用LogMessage的构造函数来生成日志信息&lt;/strong&gt;。下面用其的构造函数来生成日记信息，看看效果如何：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int main(int argc , char * argv[]){
+
+	google::InitGoogleLogging(argv[0]);
+	std::string strMsg = &quot;string&quot;;
+	const char *file = &quot;file&quot;;
+	google::LogMessage myLog(file, 20, 0, &amp;amp;strMsg);
+	myLog.stream() &amp;lt;&amp;lt; &quot;test!!!!!&quot;;
+	myLog.Flush();
+	return EXIT_SUCCESS;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;打印出来的日记信息：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Log file created at: 2016/09/10 17:00:38
+Running on machine: WUYUCHUN-PC
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0910 17:00:38.834996  4088 file:20] test!!!!!
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从结果中看来与使用  &lt;strong&gt;LOG(INFO)«“test!!!!!”&lt;/strong&gt;  的效果是一样的，从这里也可以看出调用流程。&lt;/p&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;原理&lt;/h1&gt;
+&lt;p&gt;glog借助ostream来实现日记消息的输出，通过对ostream进行继承重写定义自己的输出的格式，从以上的代码就可以看出。在这里先提示ostream如何进行 &lt;strong&gt;“类型可扩展”&lt;/strong&gt; 。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class Date{
+public:
+    Date(int year,int month, int day):year_(year),month_(month),day_(day){
+        ;
+    }
+    void writeTo(std::ostream &amp;amp;os) const{
+        os &amp;lt;&amp;lt; year_ &amp;lt;&amp;lt; month_ &amp;lt;&amp;lt; day_;
+    }
+private:
+    int year_,month_,data_;
+}
+
+std::ostream &amp;amp;operator &amp;lt;&amp;lt; (std::ostream, const Date &amp;amp;date){
+    data.writeTo(os);
+    return os;
+}
+
+int main(int argc, char *argv[]){
+    Date date(2000,0,0);
+    std::cout &amp;lt;&amp;lt; date &amp;lt;&amp;lt; std::endl;
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;从这里可以看出，glog在输出消息的时候选用ostream，以便能自己进行扩展。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;// Output the COUNTER value. This is only valid if ostream is a
+// LogStream.
+ostream&amp;amp; operator&amp;lt;&amp;lt;(ostream &amp;amp;os, const PRIVATE_Counter&amp;amp;) {
+#ifdef DISABLE_RTTI
+	LogMessage::LogStream *log = static_cast&amp;lt;LogMessage::LogStream*&amp;gt;(&amp;amp;os);
+#else
+	LogMessage::LogStream *log = dynamic_cast&amp;lt;LogMessage::LogStream*&amp;gt;(&amp;amp;os);
+#endif
+	CHECK(log &amp;amp;&amp;amp; log == log-&amp;gt;self())
+		&amp;lt;&amp;lt; &quot;You must not use COUNTER with non-glog ostream&quot;;
+	os &amp;lt;&amp;lt; log-&amp;gt;ctr();
+	return os;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;iostream 的另外一个问题是线程安全性。stdio 的函数是线程安全的，而且 C 语言还提供了 flockfile(3)/funlockfile(3) 之类的函数来明确控制 FILE* 的加锁与解锁。
+iostream 在线程安全方面没有保证，就算单个 operator« 是线程安全的，也不能保证原子性。因为 cout « a « b; 是两次函数调用，
+相当于 cout.operator«(a).operator«(b)。两次调用中间可能会被打断进行上下文切换，造成输出内容不连续，插入了其他线程打印的字符。
+而 fprintf(stdout, “%s %d”, a, b); 是一次函数调用，而且是线程安全的，打印的内容不会受其他线程影响。因此，iostream 并不适合在多线程程序中做 logging。
+&lt;a href=&quot;http://www.cnblogs.com/Solstice/archive/2011/07/17/2108715.html&quot;&gt;链接&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;glog使用LogMessageData数据结构来组织消息，代码给出的解释的为 &lt;strong&gt;we keep the data in a spearate struct so that each instance of LogMessage uses less stack 
+space&lt;/strong&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;struct LogMessage::LogMessageData  {
+	LogMessageData();
+
+	int preserved_errno_;      // preserved errno
+	// Buffer space; contains complete message text.
+	char message_text_[LogMessage::kMaxLogMessageLen+1];
+	LogStream stream_;
+	char severity_;      // What level is this LogMessage logged at?
+	int line_;                 // line number where logging call is.
+	void (LogMessage::*send_method_)();  // Call this in destructor to send
+	union {  // At most one of these is used: union to keep the size low.
+		LogSink* sink_;             // NULL or sink to send message to
+		std::vector&amp;lt;std::string&amp;gt;* outvec_; // NULL or vector to push message onto
+		std::string* message_;             // NULL or string to write message into
+	};
+	time_t timestamp_;            // Time of creation of LogMessage
+	struct ::tm tm_time_;         // Time of creation of LogMessage
+	size_t num_prefix_chars_;     // # of chars of prefix in this message
+	size_t num_chars_to_log_;     // # of chars of msg to send to log
+	size_t num_chars_to_syslog_;  // # of chars of msg to send to syslog
+	const char* basename_;        // basename of file that called LOG
+	const char* fullname_;        // fullname of file that called LOG
+	bool has_been_flushed_;       // false =&amp;gt; data has not been flushed
+	bool first_fatal_;            // true =&amp;gt; this was first fatal msg
+
+private:
+	LogMessageData(const LogMessageData&amp;amp;);
+	void operator=(const LogMessageData&amp;amp;);
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h1 id=&quot;section-2&quot;&gt;结论&lt;/h1&gt;
+&lt;p&gt;从Logmessage类的继承组合来说，跟iostream中的继承和组合类似，这就是C++ I/O中输出。下图给出了一张图，也许更能说明问题。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://images.cnblogs.com/cnblogs_com/Solstice/201107/201107171508102461.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;</content><category term="c++" /><category term="glog" /><summary>Contents</summary></entry><entry><title>glog源码（1）</title><link href="/glog%E6%BA%90%E7%A0%81(1)/" rel="alternate" type="text/html" title="glog源码（1）" /><published>2016-09-08T19:24:00+08:00</published><updated>2016-09-08T19:24:00+08:00</updated><id>/glog源码(1)</id><content type="html" xml:base="/glog%E6%BA%90%E7%A0%81(1)/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;前言&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;流程&lt;/a&gt;    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#log&quot; id=&quot;markdown-toc-log&quot;&gt;LOG（）宏&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#section-2&quot; id=&quot;markdown-toc-section-2&quot;&gt;组织消息的类&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#section-3&quot; id=&quot;markdown-toc-section-3&quot;&gt;组织日记文件的类&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-4&quot; id=&quot;markdown-toc-section-4&quot;&gt;总结&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[07:24 PM]&lt;/p&gt;
+
+&lt;h1 id=&quot;section&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;glog是一个应用级别的日记系统，使用非常方便，重要的代码行为8K，下面仅仅是记录自己看glog源码时候的一些关键点。
+&lt;a href=&quot;https://github.com/google/glog&quot;&gt;glog链接&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;流程&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;若是设计一个日记系统，需要考虑的点有哪些？&lt;/strong&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;1.系统中当前仅当有一个日记输出，也就是说，日记的输出是顺序&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;2.输出的消息格式，以及等级&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;3.输出的日记文件，以及文件的组织&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;流程如图：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://img.blog.csdn.net/20160908194848945&quot; alt=&quot;liucheng Image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;其中LogMessage类是用于组织消息内容，而LogDestination是用于组织消息的载体–文件的组织&lt;/strong&gt;，其中所谓的消息流就是通过这样写入到磁盘中的，当然
+其中代码中有很多的技巧之处。&lt;/p&gt;
+
+&lt;p&gt;在实际使用中，在代码中一般用glog所定义的宏进行消息的输出，如下图：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;if(count &amp;lt; 5 ){
+    LOG(INFO) &amp;lt;&amp;lt; &quot;less 5&quot;;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;输出的日记文件在：（linux）/tmp，类似&lt;em&gt;example.bin.username-MS-$$.test.log.INFO.20160908-141658.6235&lt;/em&gt;这种，
+（window）则是在用户/appdata/tmp/。当然这个的前提是没有设置glog的输出目录，而仅仅使用默认的。&lt;/p&gt;
+
+&lt;h2 id=&quot;log&quot;&gt;LOG（）宏&lt;/h2&gt;
+
+&lt;p&gt;glog使用宏作为日记输出，这对于应用人员来说是非常方便，并且其也定义了相应的等级，根据宏的拼接，来生成LogMessage，如下图&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://img.blog.csdn.net/20160908200332370&quot; alt=&quot;hong Image&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;组织消息的类&lt;/h2&gt;
+&lt;p&gt;关于消息的各个类，如下图所见，但是其中图与代码并不是一一对应，缺少一些小的细节，但是大体上是能反应关系的，其中用于&lt;strong&gt;C++的流的概念&lt;/strong&gt;。
+&lt;img src=&quot;http://img.blog.csdn.net/20160908201239180&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;组织日记文件的类&lt;/h2&gt;
+
+&lt;p&gt;这个是用于组织日记文件的类，具体的成员变量和成员函数没有给出。
+&lt;img src=&quot;http://img.blog.csdn.net/20160910145818439&quot; alt=&quot;destion&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;section-4&quot;&gt;总结&lt;/h1&gt;</content><category term="c++" /><category term="glog" /><summary>Contents</summary></entry><entry><title>C++错误思考(4)</title><link href="/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/" rel="alternate" type="text/html" title="C++错误思考(4)" /><published>2016-09-07T23:15:00+08:00</published><updated>2016-09-07T23:15:00+08:00</updated><id>/C++错误思考(4)</id><content type="html" xml:base="/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;前言&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#void-&quot; id=&quot;markdown-toc-void-&quot;&gt;第一种情况：以void *为主导&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;第二种 截断问题&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[11:11 PM PM]&lt;/p&gt;
+
+&lt;h1 id=&quot;section&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;C++是一个静态类别的语音，也就是说在编译的时候，会对其类型进行检查。但是C++又是一个灵活性极高的语言，因此就是
+出现&lt;strong&gt;破坏静态类型安全的编码&lt;/strong&gt;。&lt;/p&gt;
+
+&lt;h1 id=&quot;void-&quot;&gt;第一种情况：以void *为主导&lt;/h1&gt;
+&lt;p&gt;在强制类型转换中，转换到void *类型的结果会将类型的指针的类型信息都会抹除。同时，存在的情况是，基类与派生类之间的转换。
+在《探索C++内存模型》中说道基类与派生类之间的内存模型。如下：&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt; &lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;基类class子对象&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;派生类成员&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;当然这是在单继承情况下。若是多继承呢？ &lt;em&gt;在多继承条件下，单一对象往往有多个合法地址&lt;/em&gt;&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt; &lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;基类subject类型的子对象&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;基类button类型的子对象&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;派生类成员&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;在接口中使用void *作为类型转换的中介类型，并要求用户在调用接口中的某一个函数时重新提供另一个函数抹除的类型信息，
+这终究不是办法&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;第二种 截断问题&lt;/h1&gt;
+
+&lt;p&gt;发生的时机：&lt;em&gt;企图把一个派生类对象的内容复制到另一个基类对象的存储的时刻&lt;/em&gt;
+发生的后果：&lt;em&gt;那些派生类型专属的成员数据和成员函数会被截断&lt;/em&gt;。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class Employee{
+public:
+    vitual ~Employee();
+    vitual void pay() const;
+protect:
+    void setType( int type){
+        myType_ = type;
+    }
+private:
+    int myType_ ; //不好的的用法
+};
+
+calss Salaried:public Employee{
+    //...
+};
+
+Employee employee;
+Salaried salaried;
+employee = salaried; //发生什么，截断了
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;em&gt;Salaried 类型信息完全被隔离，虚函数表中根本没有放入Salaried类型所指定对应函数入口地址&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;这里也提出一个问题：在设计的时候，要保证截断情况保持赋值结果的状态的合法性。&lt;/p&gt;
+
+&lt;hr /&gt;
+&lt;p&gt;截断问题的最常见来源，是一个派生类的class类对象被以传值方式传递给一个基类的形参&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;void fire( Employee victim);
+fire(salaried); //被截断
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;解决方法：传递引用或指针&lt;/strong&gt;
+—-&lt;/p&gt;</content><category term="C++" /><summary>Contents</summary></entry><entry><title>Ramme Jekyll Theme</title><link href="/ramme-theme/" rel="alternate" type="text/html" title="Ramme Jekyll Theme" /><published>2016-03-21T00:00:00+08:00</published><updated>2016-03-21T00:00:00+08:00</updated><id>/ramme-theme</id><content type="html" xml:base="/ramme-theme/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#about&quot; id=&quot;markdown-toc-about&quot;&gt;About&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#installation&quot; id=&quot;markdown-toc-installation&quot;&gt;Installation&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#scaffolding&quot; id=&quot;markdown-toc-scaffolding&quot;&gt;Scaffolding&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#site-setup&quot; id=&quot;markdown-toc-site-setup&quot;&gt;Site Setup&lt;/a&gt;    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#site-wide-configuration&quot; id=&quot;markdown-toc-site-wide-configuration&quot;&gt;Site Wide Configuration&lt;/a&gt;        &lt;ul&gt;
+          &lt;li&gt;&lt;a href=&quot;#title&quot; id=&quot;markdown-toc-title&quot;&gt;title&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a href=&quot;#url&quot; id=&quot;markdown-toc-url&quot;&gt;url&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a href=&quot;#google-analytics-and-webmaster-tools&quot; id=&quot;markdown-toc-google-analytics-and-webmaster-tools&quot;&gt;Google Analytics and Webmaster Tools&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#navigation-links&quot; id=&quot;markdown-toc-navigation-links&quot;&gt;Navigation Links&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#layouts-and-content&quot; id=&quot;markdown-toc-layouts-and-content&quot;&gt;Layouts and Content&lt;/a&gt;    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#post-and-page&quot; id=&quot;markdown-toc-post-and-page&quot;&gt;Post and Page&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#post-index-page&quot; id=&quot;markdown-toc-post-index-page&quot;&gt;Post Index Page&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#thumbnails-for-og-and-twitter-cards&quot; id=&quot;markdown-toc-thumbnails-for-og-and-twitter-cards&quot;&gt;Thumbnails for OG and Twitter Cards&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#kramdown-table-of-contents&quot; id=&quot;markdown-toc-kramdown-table-of-contents&quot;&gt;Kramdown Table of Contents&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#questions&quot; id=&quot;markdown-toc-questions&quot;&gt;Questions?&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#license&quot; id=&quot;markdown-toc-license&quot;&gt;License&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/img/Logo.png&quot; alt=&quot;Logo&quot; class=&quot;selfie&quot; /&gt;&lt;/p&gt;
+
+&lt;center&gt;&lt;b&gt;Ramme&lt;/b&gt; is a simple jekyll theme.&lt;/center&gt;
+
+&lt;h2 id=&quot;about&quot;&gt;About&lt;/h2&gt;
+
+&lt;p&gt;I made this theme after seeing this &lt;a href=&quot;http://spoonm.org/share/rice/01.png&quot;&gt;screenshot&lt;/a&gt;. I took some parts from @mmistakes, like TOC, sample posts. I never tought making a theme from scratch would be this hard. And it’s still WIP.&lt;/p&gt;
+
+&lt;p&gt;I’m not a designer or something, so I’m sure there is a better way to make this theme. But it’s working and looks acceptable for different screen sizes. If something looks extremely ugly and you can’t resist to fix it, just send me a PR. I will be grateful.&lt;/p&gt;
+
+&lt;p&gt;I see some people using this theme. I need to search on Github to find who use it. But I don’t want to search like this. If you like this theme or using it, please give a &lt;strong&gt;star&lt;/strong&gt; for motivation.&lt;/p&gt;
+
+&lt;iframe src=&quot;https://ghbtns.com/github-btn.html?user=TaylanTatli&amp;amp;repo=Ramme&amp;amp;type=star&amp;amp;count=true&amp;amp;size=large&quot; frameborder=&quot;0&quot; scrolling=&quot;0&quot; width=&quot;160px&quot; height=&quot;30px&quot;&gt;&lt;/iframe&gt;
+
+&lt;h2 id=&quot;installation&quot;&gt;Installation&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Fork the &lt;a href=&quot;https://github.com/TaylanTatli/Ramme/fork&quot;&gt;Repo&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Edit &lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt; file.&lt;/li&gt;
+  &lt;li&gt;Remove sample posts from &lt;code class=&quot;highlighter-rouge&quot;&gt;_posts&lt;/code&gt; folder and add yours.&lt;/li&gt;
+  &lt;li&gt;Edit &lt;code class=&quot;highlighter-rouge&quot;&gt;index.md&lt;/code&gt; file in &lt;code class=&quot;highlighter-rouge&quot;&gt;about&lt;/code&gt; folder.&lt;/li&gt;
+  &lt;li&gt;Change repo name to &lt;code class=&quot;highlighter-rouge&quot;&gt;YourUserName.github.io&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;That’s all.&lt;/p&gt;
+
+&lt;h2 id=&quot;scaffolding&quot;&gt;Scaffolding&lt;/h2&gt;
+&lt;p&gt;How Ramme is organized and what the various files are. All posts, layouts, includes, stylesheets, assets, and whatever else is grouped nicely under the root folder.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;├── 404.html                                    # 404 page
+├── about                                       # About Page
+├── assets
+│   ├── css                                     # Compiled stylesheets
+│   ├── fonts                                   # webfonts
+│   ├── img                                     # Folder for images
+│   │   ├── favicon                             # Folder for favicons
+│   └── js                                      # Folder for scripts
+├── blog                                        # Post list for blog
+├── _config.yml                                 # Configuration file for jekyll
+├── _data
+│   └── navigation.yml                          # Navigation links
+├── _includes
+│   ├── favicon.html                            # Favicon links
+│   ├── footer-home.html                        # Footer for home page
+│   ├── footer.html                             # Footer for other pages
+│   ├── head-home.html                          # Head for home page
+│   ├── head.html                               # Head for other pages
+│   ├── nav-home.html                           # Top navigation for home page
+│   ├── nav.html                                # Top navigation for other pages
+│   ├── open-graph.html                         # Twitter Cards and Open Graph meta data
+│   ├── scripts.html                            # Site scripts
+│   ├── social-links.html                       # Social links to show in homepage
+│   └── toc.html                                # Table of contents to use in some posts
+├── index.html                                  # Homepage
+├── _layouts
+│   ├── home.html                               # Home layout
+│   ├── page.html                               # Page layout
+│   ├── post.html                               # Post layout
+│   ├── post-index.html                         # Post list layout
+│   └── project.html                            # Project list layout
+├── _posts                                      # MarkDown formatted posts
+├── _sass                                       # Sass stylesheets
+└── projects                                    # Projects list page&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;site-setup&quot;&gt;Site Setup&lt;/h2&gt;
+&lt;p&gt;A quick checklist of the files you’ll want to edit to get up and running.&lt;/p&gt;
+
+&lt;h3 id=&quot;site-wide-configuration&quot;&gt;Site Wide Configuration&lt;/h3&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt; is your friend. Open it up and personalize it. Most variables are self explanatory but here’s an explanation of each if needed:&lt;/p&gt;
+
+&lt;h4 id=&quot;title&quot;&gt;title&lt;/h4&gt;
+
+&lt;p&gt;The title of your site… shocker!&lt;/p&gt;
+
+&lt;p&gt;Example &lt;code class=&quot;highlighter-rouge&quot;&gt;title: My Awesome Site&lt;/code&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;url&quot;&gt;url&lt;/h4&gt;
+
+&lt;p&gt;Used to generate absolute urls in &lt;code class=&quot;highlighter-rouge&quot;&gt;sitemap.xml&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;feed.xml&lt;/code&gt;, and for generating canonical URLs in &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;head&amp;gt;&lt;/code&gt;. When developing locally either comment this out or use something like &lt;code class=&quot;highlighter-rouge&quot;&gt;http://localhost:4000&lt;/code&gt; so all assets load properly. &lt;em&gt;Don’t include a trailing &lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt;&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Examples:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://taylantatli.me/Ramme&lt;/span&gt;
+&lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://localhost:4000&lt;/span&gt;
+&lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;//cooldude.github.io&lt;/span&gt;
+&lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h4 id=&quot;google-analytics-and-webmaster-tools&quot;&gt;Google Analytics and Webmaster Tools&lt;/h4&gt;
+
+&lt;p&gt;Google Analytics UA and Webmaster Tool verification tags can be entered in &lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt;. For more information on obtaining these meta tags check &lt;a href=&quot;http://support.google.com/webmasters/bin/answer.py?hl=en&amp;amp;answer=35179&quot;&gt;Google Webmaster Tools&lt;/a&gt; and &lt;a href=&quot;https://ssl.bing.com/webmaster/configure/verify/ownership&quot;&gt;Bing Webmaster Tools&lt;/a&gt; support.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;navigation-links&quot;&gt;Navigation Links&lt;/h3&gt;
+
+&lt;p&gt;To set what links appear in the top navigation edit &lt;code class=&quot;highlighter-rouge&quot;&gt;_data/navigation.yml&lt;/code&gt;. Use the following format to set the URL and title for as many links as you’d like. &lt;em&gt;External links will open in a new window.&lt;/em&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Home&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Blog&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/blog/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Projects&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/projects/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;About&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/about/&lt;/span&gt;
+
+&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Ramme&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://taylantatli.me/Ramme&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;layouts-and-content&quot;&gt;Layouts and Content&lt;/h2&gt;
+
+&lt;p&gt;Explanations of the various &lt;code class=&quot;highlighter-rouge&quot;&gt;_layouts&lt;/code&gt; included with the theme and when to use them.&lt;/p&gt;
+
+&lt;h3 id=&quot;post-and-page&quot;&gt;Post and Page&lt;/h3&gt;
+
+&lt;p&gt;These two layouts are almost similar. Only difference is page layout doesn’t show date under title.&lt;/p&gt;
+
+&lt;h3 id=&quot;post-index-page&quot;&gt;Post Index Page&lt;/h3&gt;
+
+&lt;p&gt;A &lt;a href=&quot;/blog/&quot;&gt;sample index page&lt;/a&gt; listing all blog posts. The name can be customized to your liking by editing a few references. For example, to change &lt;strong&gt;Blog&lt;/strong&gt; to &lt;strong&gt;Posts&lt;/strong&gt; update the following:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;In &lt;code class=&quot;highlighter-rouge&quot;&gt;_data/navigation.yml&lt;/code&gt;: rename the title and URL to the following:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;  &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Posts&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/posts/&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Rename &lt;code class=&quot;highlighter-rouge&quot;&gt;blog/index.md&lt;/code&gt; to &lt;code class=&quot;highlighter-rouge&quot;&gt;posts/index.md&lt;/code&gt; and update the YAML front matter accordingly.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;thumbnails-for-og-and-twitter-cards&quot;&gt;Thumbnails for OG and Twitter Cards&lt;/h3&gt;
+
+&lt;p&gt;Site logo is used by &lt;a href=&quot;https://developers.facebook.com/docs/opengraph/&quot;&gt;Open Graph&lt;/a&gt; and &lt;a href=&quot;https://dev.twitter.com/docs/cards&quot;&gt;Twitter Cards&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p class=&quot;notice&quot;&gt;&lt;strong&gt;Pro-Tip&lt;/strong&gt;: You need to &lt;a href=&quot;https://dev.twitter.com/docs/cards&quot;&gt;apply for Twitter Cards&lt;/a&gt; before they will begin showing up when links to your site are shared.&lt;/p&gt;
+
+&lt;h3 id=&quot;kramdown-table-of-contents&quot;&gt;Kramdown Table of Contents&lt;/h3&gt;
+
+&lt;p&gt;To include an auto-generated &lt;strong&gt;table of contents&lt;/strong&gt; for posts and pages, add the following &lt;code class=&quot;highlighter-rouge&quot;&gt;_include&lt;/code&gt; before the actual content. &lt;a href=&quot;http://kramdown.rubyforge.org/converter/html.html#toc&quot;&gt;Kramdown will take care of the rest&lt;/a&gt; and convert all headlines into list of links.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;{% include toc.html %}&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;questions&quot;&gt;Questions?&lt;/h2&gt;
+
+&lt;p&gt;Found a bug or aren’t quite sure how something works? By all means &lt;a href=&quot;https://github.com/TaylanTatli/Ramme/issues/new&quot;&gt;file a GitHub Issue&lt;/a&gt;. And if you make something cool with this theme feel free to let me know.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&quot;license&quot;&gt;License&lt;/h2&gt;
+
+&lt;p&gt;This theme is free and open source software, distributed under the MIT License. So feel free to use this Jekyll theme on your site without linking back to me or including a disclaimer.&lt;/p&gt;</content><category term="jekyll" /><category term="ramme" /><category term="blog" /><category term="about" /><category term="theme" /><summary>Simple Jekyll theme for your blog by Taylan Tatlı.</summary></entry><entry><title>Markdown Syntax</title><link href="/markdown-syntax/" rel="alternate" type="text/html" title="Markdown Syntax" /><published>2016-03-15T00:00:00+08:00</published><updated>2016-03-15T00:00:00+08:00</updated><id>/markdown-syntax</id><content type="html" xml:base="/markdown-syntax/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#html-elements&quot; id=&quot;markdown-toc-html-elements&quot;&gt;HTML Elements&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#heading-1&quot; id=&quot;markdown-toc-heading-1&quot;&gt;Heading 1&lt;/a&gt;    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#heading-2&quot; id=&quot;markdown-toc-heading-2&quot;&gt;Heading 2&lt;/a&gt;        &lt;ul&gt;
+          &lt;li&gt;&lt;a href=&quot;#heading-3&quot; id=&quot;markdown-toc-heading-3&quot;&gt;Heading 3&lt;/a&gt;            &lt;ul&gt;
+              &lt;li&gt;&lt;a href=&quot;#heading-4&quot; id=&quot;markdown-toc-heading-4&quot;&gt;Heading 4&lt;/a&gt;                &lt;ul&gt;
+                  &lt;li&gt;&lt;a href=&quot;#heading-5&quot; id=&quot;markdown-toc-heading-5&quot;&gt;Heading 5&lt;/a&gt;                    &lt;ul&gt;
+                      &lt;li&gt;&lt;a href=&quot;#heading-6&quot; id=&quot;markdown-toc-heading-6&quot;&gt;Heading 6&lt;/a&gt;&lt;/li&gt;
+                    &lt;/ul&gt;
+                  &lt;/li&gt;
+                &lt;/ul&gt;
+              &lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/li&gt;
+          &lt;li&gt;&lt;a href=&quot;#body-text&quot; id=&quot;markdown-toc-body-text&quot;&gt;Body text&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a href=&quot;#blockquotes&quot; id=&quot;markdown-toc-blockquotes&quot;&gt;Blockquotes&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#list-types&quot; id=&quot;markdown-toc-list-types&quot;&gt;List Types&lt;/a&gt;        &lt;ul&gt;
+          &lt;li&gt;&lt;a href=&quot;#ordered-lists&quot; id=&quot;markdown-toc-ordered-lists&quot;&gt;Ordered Lists&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a href=&quot;#unordered-lists&quot; id=&quot;markdown-toc-unordered-lists&quot;&gt;Unordered Lists&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#tables&quot; id=&quot;markdown-toc-tables&quot;&gt;Tables&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#code-snippets&quot; id=&quot;markdown-toc-code-snippets&quot;&gt;Code Snippets&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#buttons&quot; id=&quot;markdown-toc-buttons&quot;&gt;Buttons&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#notices&quot; id=&quot;markdown-toc-notices&quot;&gt;Notices&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;h2 id=&quot;html-elements&quot;&gt;HTML Elements&lt;/h2&gt;
+
+&lt;p&gt;Below is just about everything you’ll need to style in the theme. Check the source code to see the many embedded elements within paragraphs.&lt;/p&gt;
+
+&lt;h1 id=&quot;heading-1&quot;&gt;Heading 1&lt;/h1&gt;
+
+&lt;h2 id=&quot;heading-2&quot;&gt;Heading 2&lt;/h2&gt;
+
+&lt;h3 id=&quot;heading-3&quot;&gt;Heading 3&lt;/h3&gt;
+
+&lt;h4 id=&quot;heading-4&quot;&gt;Heading 4&lt;/h4&gt;
+
+&lt;h5 id=&quot;heading-5&quot;&gt;Heading 5&lt;/h5&gt;
+
+&lt;h6 id=&quot;heading-6&quot;&gt;Heading 6&lt;/h6&gt;
+
+&lt;h3 id=&quot;body-text&quot;&gt;Body text&lt;/h3&gt;
+
+&lt;p&gt;Lorem ipsum dolor sit amet, test link adipiscing elit. &lt;strong&gt;This is strong&lt;/strong&gt;. Nullam dignissim convallis est. Quisque aliquam.&lt;/p&gt;
+
+&lt;p class=&quot;image-pull-right&quot;&gt;&lt;img src=&quot;https://mmistakes.github.io/minimal-mistakes/images/3953273590_704e3899d5_m.jpg&quot; alt=&quot;Smithsonian Image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;This is emphasized&lt;/em&gt;. Donec faucibus. Nunc iaculis suscipit dui. 53 = 125. Water is H2O. Nam sit amet sem. Aliquam libero nisi, imperdiet at, tincidunt nec, gravida vehicula, nisl. The New York Times (That’s a citation). Underline.Maecenas ornare tortor. Donec sed tellus eget sapien fringilla nonummy. Mauris a ante. Suspendisse quam sem, consequat at, commodo vitae, feugiat in, nunc. Morbi imperdiet augue quis tellus.&lt;/p&gt;
+
+&lt;p&gt;HTML and CSS are our tools. Mauris a ante. Suspendisse quam sem, consequat at, commodo vitae, feugiat in, nunc. Morbi imperdiet augue quis tellus. Praesent mattis, massa quis luctus fermentum, turpis mi volutpat justo, eu volutpat enim diam eget metus.&lt;/p&gt;
+
+&lt;h3 id=&quot;blockquotes&quot;&gt;Blockquotes&lt;/h3&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Lorem ipsum dolor sit amet, test link adipiscing elit. Nullam dignissim convallis est. Quisque aliquam.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;list-types&quot;&gt;List Types&lt;/h2&gt;
+
+&lt;h3 id=&quot;ordered-lists&quot;&gt;Ordered Lists&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Item one
+    &lt;ol&gt;
+      &lt;li&gt;sub item one&lt;/li&gt;
+      &lt;li&gt;sub item two&lt;/li&gt;
+      &lt;li&gt;sub item three&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Item two&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;unordered-lists&quot;&gt;Unordered Lists&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Item one&lt;/li&gt;
+  &lt;li&gt;Item two&lt;/li&gt;
+  &lt;li&gt;Item three&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;tables&quot;&gt;Tables&lt;/h2&gt;
+
+&lt;table rules=&quot;groups&quot;&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: left&quot;&gt;Header1&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Header2&lt;/th&gt;
+      &lt;th style=&quot;text-align: right&quot;&gt;Header3&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell2&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell3&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell4&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell5&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell6&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell2&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell3&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;cell4&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;cell5&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;cell6&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tfoot&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: left&quot;&gt;Foot1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Foot2&lt;/td&gt;
+      &lt;td style=&quot;text-align: right&quot;&gt;Foot3&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tfoot&gt;
+&lt;/table&gt;
+
+&lt;h2 id=&quot;code-snippets&quot;&gt;Code Snippets&lt;/h2&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-css&quot; data-lang=&quot;css&quot;&gt;&lt;span class=&quot;nf&quot;&gt;#container&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nl&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;left&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;nl&quot;&gt;margin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;-240px&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;nl&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100%&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h2 id=&quot;buttons&quot;&gt;Buttons&lt;/h2&gt;
+
+&lt;p&gt;Make any link standout more when applying the &lt;code class=&quot;highlighter-rouge&quot;&gt;.btn&lt;/code&gt; class.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;a&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;href=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;#&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;btn btn-success&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Success Button&lt;span class=&quot;nt&quot;&gt;&amp;lt;/a&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn&quot;&gt;Primary Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-success&quot;&gt;Success Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-warning&quot;&gt;Warning Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-danger&quot;&gt;Danger Button&lt;/a&gt;&lt;/div&gt;
+&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-info&quot;&gt;Info Button&lt;/a&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;notices&quot;&gt;Notices&lt;/h2&gt;
+
+&lt;p class=&quot;notice&quot;&gt;&lt;strong&gt;Watch out!&lt;/strong&gt; You can also add notices by appending &lt;code class=&quot;highlighter-rouge&quot;&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;err&quot;&gt;.notice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt; to a paragraph.&lt;/p&gt;</content><category term="markdown" /><category term="syntax" /><category term="sample" /><category term="test" /><category term="jekyll" /><summary>Just about everything you'll need to style in the theme: headings, paragraphs, blockquotes, tables, code blocks, and more.</summary></entry><entry><title>套接字编程简介（笔记）</title><link href="/%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E7%AE%80%E4%BB%8B(%E7%AC%94%E8%AE%B0)/" rel="alternate" type="text/html" title="套接字编程简介（笔记）" /><published>2015-07-25T20:26:00+08:00</published><updated>2015-07-25T20:26:00+08:00</updated><id>/套接字编程简介(笔记)</id><content type="html" xml:base="/%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E7%AE%80%E4%BB%8B(%E7%AC%94%E8%AE%B0)/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;前言&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;套接字结构&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-2&quot; id=&quot;markdown-toc-section-2&quot;&gt;套接字传递方向&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-3&quot; id=&quot;markdown-toc-section-3&quot;&gt;操作套接字结构的函数&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#tcp&quot; id=&quot;markdown-toc-tcp&quot;&gt;基本TCP套接字编程&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-4&quot; id=&quot;markdown-toc-section-4&quot;&gt;并发服务器的编程框架&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[8:26 PM]&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;前言&lt;/h2&gt;
+
+&lt;p&gt;网络编程-&amp;gt;套接字-&amp;gt;套接字地址结构。
+套接字地址结构可以在两个方向上传递：从进程到内核、从内核到进程！&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;套接字结构&lt;/h2&gt;
+
+&lt;p&gt;以Windows作为实例，看看套接字的结构：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
+ * Socket address, internet style.
+ */
+struct sockaddr_in {
+        short   sin_family;
+        u_short sin_port;
+        struct  in_addr sin_addr;
+        char    sin_zero[8];
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;注意：&lt;/strong&gt;
+套接字地址结构仅在给定主机上使用，虽然结构中的某些字段（例如IP地址和端口号）用在不用主机之间的通信中，但是结构本身并不在主机之间传递！&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;当作为一个参数传递进任何套接字函数时，套接字地址结构总是以引用形式（也就是以指向该结构的指针）来传递，然而以这样的指针作为参数之一的任何套接字函数必须处理来自所支持的任何协议族的套接字地址结构
+在如何声明所传递指针的数据类型上存在一个问题？
+解决的方法：定义一个通用的套接字数据结构！
+&lt;code class=&quot;highlighter-rouge&quot;&gt;
+Ret = bind(ServerSocket, (struct sockaddr*)&amp;amp;LocalAddr, sizeof(LocalAddr));
+&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\IPV4.png&quot; alt=&quot;&quot; /&gt;
+             图一 套接字结构图！&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;套接字传递方向&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;从进程空间到内核空间&lt;/th&gt;
+      &lt;th&gt;从内核空间到进程空间&lt;/th&gt;
+      &lt;th&gt; &lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;函数&lt;/td&gt;
+      &lt;td&gt;bind 、connect 、sendto&lt;/td&gt;
+      &lt;td&gt;accept 、 recvfrom 、 getsockname 、 getpeername&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;图示&lt;/td&gt;
+      &lt;td&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\ProToKne.PNG&quot; alt=&quot;&quot; /&gt;&lt;/td&gt;
+      &lt;td&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\KneToPro.PNG&quot; alt=&quot;&quot; /&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;操作套接字结构的函数&lt;/h2&gt;
+
+&lt;p&gt;使用inet_addr函数（返回值为32位的网络字节序二进制值）易于出现的问题：
+1.所有的2^3个可能的二进制都是有效的IP地址（0.0.0.0到255.255.255.255），但是当出错时该函数返回INADDR_NONE常值（通常是一个32位均为1的值），这意味着点分十进制数（255.255.255.255）不能由该函数处理。因为其的二进制值被用于指示函数失败。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;改用inet_aton函数！&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;对结果进行静态存储导致该函数不可重入且非线程安全！！！！！！！！&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssize_t Readn(int fd, void *vptr, size_t n)
+{
+    size_t nleft;
+    ssize_t nread;
+    char *ptr;
+    
+    ptr = vptr;
+    nleft = n;
+    while( nleft &amp;gt; 0 )
+    {
+         if( ( nread = read(fd,ptr,nleft ) ) &amp;lt; 0 )
+         {
+              if( errno == EINTR )
+                  nread = 0;
+              else
+                  return -1;
+         }
+         else if( nread == 0 )
+              break;
+         
+         nleft -= nread;
+         ptr += nread;
+    }
+    return ( n - nleft );
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;套接字地址结构是每一个网络程序的重要组成部分，分配它们，填写它们，把指向它们的指针传递给各个套接字函数。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;TCP套接字为应用进程提供一个字节流，它们没有记录标记，从TCP套接字read的返回值可能比我们请求的数量少，但是这不表示发生错误。对于文本行交互的应用来说，程序应该按照操作缓冲区而非按照操作文本行来编写。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;tcp&quot;&gt;基本TCP套接字编程&lt;/h2&gt;
+
+&lt;p&gt;下图给出TCP客户端和服务段进程之间发生的一些典型事件的时间表！&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\套接字的时间表.PNG&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;注意：
+1.客户在调用connect前不必非得调用bind函数，因为如果需要的话，内核会确定源IP地址，big选择一个临时端口作为源端口。&lt;/p&gt;
+
+&lt;p&gt;2、按照&lt;strong&gt;TCP状态转换图（图2-4 原书中！）&lt;/strong&gt;，connect函数导致当前套接字从CLOSED状态（该套接字自从由socket函数创建以来一直所处的状态）转移到SYN_SENT状态，若成功再转移到ESTABLISHED状态，若connect失败则该套接字不再可用，必须关闭，我们不能对这样的套接字再次调用connect函数。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\bind.PNG&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;可以通过使用GetEnv函数获取环境变量，来改变程序运行轨迹！！！！！！！！&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;section-4&quot;&gt;并发服务器的编程框架&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;pid_t pid
+int listenfd, connfd
+listenfd = socket();
+Bind(listenfd,...)
+for(;;)
+{
+	connfd = Accept(listenfd,...)
+    if( ( pid = for() ) == 0 )
+    {
+    	close(linsenfd);
+        doit(connfd);
+        close(connfd);
+    }
+    close(connfd);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;</content><category term="windows" /><summary>Contents</summary></entry><entry><title>认识coff文件格式</title><link href="/%E8%AE%A4%E8%AF%86Coff%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/" rel="alternate" type="text/html" title="认识coff文件格式" /><published>2015-07-24T21:54:00+08:00</published><updated>2015-07-24T21:54:00+08:00</updated><id>/认识Coff文件格式</id><content type="html" xml:base="/%E8%AE%A4%E8%AF%86Coff%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;前言&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;编译&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#coff&quot; id=&quot;markdown-toc-coff&quot;&gt;COFF的文件格式&lt;/a&gt;    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#image-header&quot; id=&quot;markdown-toc-image-header&quot;&gt;Image Header&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#section-tabe&quot; id=&quot;markdown-toc-section-tabe&quot;&gt;Section Tabe&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#symboltable&quot; id=&quot;markdown-toc-symboltable&quot;&gt;Symboltable&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[9:54 PM]&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;前言&lt;/h2&gt;
+&lt;p&gt;经常编译代码，运行代码，修改Bug,也会遇到各种问题，而且有时更多与编译、链接相关的问题，因此，就想了解一下最基本的编译、链接的原理。（平台为windows7和VS2010）&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;编译&lt;/h2&gt;
+&lt;p&gt;先了解编译出来的东东，而且使用的cmd编译命令，而不是IDE，因为使用IDE就无法知道中间过程了。先上码。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int printf( const char *format,...);
+
+int global_int_val = 84;
+int global_uninit_var;
+
+void func1(int i)
+{
+    printf(&quot;%d\n&quot;,i);
+}
+
+int main(void)
+{
+    static int static_var = 85;
+    static int static_var2;
+    int a = 1;
+    int b;
+    
+    func1( static_var + static_var2+ a + b );
+    
+    return a;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;在VS控制台的命令，&lt;strong&gt;cl /c /Za SimpleSection.c&lt;/strong&gt;，产生的文件为&lt;strong&gt;SimpleSection.obj&lt;/strong&gt;，打开后就是一大堆二进制的数据。用 &lt;strong&gt;dumpbin&lt;/strong&gt;工具进行查看，命令&lt;strong&gt;dumpbin /ALL SimpleSection.obj &amp;gt; SimpleSection.txt&lt;/strong&gt;,产生的结果如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Microsoft (R) COFF/PE Dumper Version 10.00.30319.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file SimpleSection.obj
+
+File Type: COFF OBJECT
+
+FILE HEADER VALUES
+             14C machine (x86)
+               5 number of sections
+        55B240DA time date stamp Fri Jul 24 21:42:50 2015
+             1F0 file pointer to symbol table
+              14 number of symbols
+               0 size of optional header
+               0 characteristics
+
+SECTION HEADER #1
+.drectve name
+       0 physical address
+       0 virtual address
+      18 size of raw data
+      DC file pointer to raw data (000000DC to 000000F3)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+  100A00 flags
+         Info
+         Remove
+         1 byte align
+
+RAW DATA #1
+  00000000: 20 20 20 2F 44 45 46 41 55 4C 54 4C 49 42 3A 22     /DEFAULTLIB:&quot;
+  00000010: 4C 49 42 43 4D 54 22 20                          LIBCMT&quot; 
+
+   Linker Directives
+   -----------------
+   /DEFAULTLIB:&quot;LIBCMT&quot;
+
+SECTION HEADER #2
+.debug$S name
+       0 physical address
+       0 virtual address
+      70 size of raw data
+      F4 file pointer to raw data (000000F4 to 00000163)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+42100040 flags
+         Initialized Data
+         Discardable
+         1 byte align
+         Read Only
+
+RAW DATA #2
+  00000000: 04 00 00 00 F1 00 00 00 61 00 00 00 23 00 01 11  ....?...a...#...
+  00000010: 00 00 00 00 45 3A 5C 50 72 6F 67 72 61 6D 5C 53  ....E:\Program\S
+  00000020: 69 6D 70 6C 65 53 65 63 74 69 6F 6E 2E 6F 62 6A  impleSection.obj
+  00000030: 00 3A 00 3C 11 00 22 00 00 07 00 10 00 00 00 6F  .:.&amp;lt;..&quot;........o
+  00000040: 76 01 00 10 00 00 00 6F 76 01 00 4D 69 63 72 6F  v......ov..Micro
+  00000050: 73 6F 66 74 20 28 52 29 20 4F 70 74 69 6D 69 7A  soft (R) Optimiz
+  00000060: 69 6E 67 20 43 6F 6D 70 69 6C 65 72 00 00 00 00  ing Compiler....
+
+SECTION HEADER #3
+   .data name
+       0 physical address
+       0 virtual address
+       C size of raw data
+     164 file pointer to raw data (00000164 to 0000016F)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300040 flags
+         Initialized Data
+         4 byte align
+         Read Write
+
+RAW DATA #3
+  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
+
+SECTION HEADER #4
+   .text name
+       0 physical address
+       0 virtual address
+      4E size of raw data
+     170 file pointer to raw data (00000170 to 000001BD)
+     1BE file pointer to relocation table
+       0 file pointer to line numbers
+       5 number of relocations
+       0 number of line numbers
+60500020 flags
+         Code
+         16 byte align
+         Execute Read
+
+RAW DATA #4
+  00000000: 55 8B EC 8B 45 08 50 68 00 00 00 00 E8 00 00 00  U.ì.E.Ph....è...
+  00000010: 00 83 C4 08 5D C3 CC CC CC CC CC CC CC CC CC CC  ..?.]?ìììììììììì
+  00000020: 55 8B EC 83 EC 08 C7 45 FC 01 00 00 00 A1 00 00  U.ì.ì.?Eü....?..
+  00000030: 00 00 03 05 00 00 00 00 03 45 FC 03 45 F8 50 E8  .........Eü.E?Pè
+  00000040: 00 00 00 00 83 C4 04 8B 45 FC 8B E5 5D C3        .....?..Eü.?]?
+
+RELOCATIONS #4
+                                                Symbol    Symbol
+ Offset    Type              Applied To         Index     Name
+ --------  ----------------  -----------------  --------  ------
+ 00000008  DIR32                      00000000         A  $SG893
+ 0000000D  REL32                      00000000         F  _printf
+ 0000002E  DIR32                      00000000         B  ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+ 00000034  DIR32                      00000000        13  ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+ 00000040  REL32                      00000000         E  _func1
+
+SECTION HEADER #5
+    .bss name
+       0 physical address
+       0 virtual address
+       4 size of raw data
+       0 file pointer to raw data
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300080 flags
+         Uninitialized Data
+         4 byte align
+         Read Write
+
+COFF SYMBOL TABLE
+000 00AA766F ABS    notype       Static       | @comp.id
+001 00000001 ABS    notype       Static       | @feat.00
+002 00000000 SECT1  notype       Static       | .drectve
+    Section length   18, #relocs    0, #linenums    0, checksum        0
+004 00000000 SECT2  notype       Static       | .debug$S
+    Section length   70, #relocs    0, #linenums    0, checksum        0
+006 00000004 UNDEF  notype       External     | _global_uninit_var
+007 00000000 SECT3  notype       Static       | .data
+    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
+009 00000000 SECT3  notype       External     | _global_int_val
+00A 00000004 SECT3  notype       Static       | $SG893
+00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+00C 00000000 SECT4  notype       Static       | .text
+    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
+00E 00000000 SECT4  notype ()    External     | _func1
+00F 00000000 UNDEF  notype ()    External     | _printf
+010 00000020 SECT4  notype ()    External     | _main
+011 00000000 SECT5  notype       Static       | .bss
+    Section length    4, #relocs    0, #linenums    0, checksum        0
+013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+
+String Table Size = 0x5C bytes
+
+  Summary
+
+           4 .bss
+           C .data
+          70 .debug$S
+          18 .drectve
+          4E .text
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;coff&quot;&gt;COFF的文件格式&lt;/h2&gt;
+
+&lt;p&gt;其实从上面的结果比较让人不解，所以需要了解一下COFF文件的格式，这样的话，在回头看的时候，就比较非常容易的理解了。&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Image Header  IMAGE_FILE_HEADER&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Section Tabel IMAGE_SECTION_HEADER[]&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.text&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.data&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.drectve&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;.debug$S&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;…&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Symbol Table&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;把上面的结果进行分割，以便更好的理解，COFF格式！&lt;/p&gt;
+
+&lt;h3 id=&quot;image-header&quot;&gt;Image Header&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;File Type: COFF OBJECT    ---&amp;gt; 文件类型
+
+FILE HEADER VALUES
+             14C machine (x86) --&amp;gt; 目标机器类型 微软定义14C表示X86
+               5 number of sections --&amp;gt; 段的数量
+        55B240DA time date stamp Fri Jul 24 21:42:50 2015 --&amp;gt;创建时间
+             1F0 file pointer to symbol table --&amp;gt;符号表在PE中的位置
+              14 number of symbols ---&amp;gt;符号数量
+               0 size of optional header ----&amp;gt; OptionalHeader的大小，不存在为0
+               0 characteristics
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-tabe&quot;&gt;Section Tabe&lt;/h3&gt;
+
+&lt;p&gt;COFF文件的段表，它是一个类型为“IMAGE_SECTION_HEADER”结构的数组，数组里面每一个元素代表一个段。这个数组的元素与该文件包含的段的数量是一致。可以查看一下IMAGE_SECTION_HEADER，就可以与下面的内容对应上了。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;SECTION HEADER #3
+   .data name
+       0 physical address
+       0 virtual address
+       C size of raw data
+     164 file pointer to raw data (00000164 to 0000016F)
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0300040 flags
+         Initialized Data
+         4 byte align
+         Read Write
+
+RAW DATA #3
+  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;symboltable&quot;&gt;Symboltable&lt;/h3&gt;
+
+&lt;p&gt;最后的面的是COFF符号表&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;COFF SYMBOL TABLE
+000 00AA766F ABS    notype       Static       | @comp.id
+001 00000001 ABS    notype       Static       | @feat.00
+002 00000000 SECT1  notype       Static       | .drectve
+    Section length   18, #relocs    0, #linenums    0, checksum        0
+004 00000000 SECT2  notype       Static       | .debug$S
+    Section length   70, #relocs    0, #linenums    0, checksum        0
+006 00000004 UNDEF  notype       External     | _global_uninit_var
+007 00000000 SECT3  notype       Static       | .data
+    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
+009 00000000 SECT3  notype       External     | _global_int_val
+00A 00000004 SECT3  notype       Static       | $SG893
+00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
+00C 00000000 SECT4  notype       Static       | .text
+    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
+00E 00000000 SECT4  notype ()    External     | _func1
+00F 00000000 UNDEF  notype ()    External     | _printf
+010 00000020 SECT4  notype ()    External     | _main
+011 00000000 SECT5  notype       Static       | .bss
+    Section length    4, #relocs    0, #linenums    0, checksum        0
+013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;第一列为符号的编号，即符号在符号表中的下表。&lt;/p&gt;
+
+&lt;p&gt;第二列为符号的大小，即符号所表示的对象所占用的空间。&lt;/p&gt;
+
+&lt;p&gt;第三列为符号所在的位置，ABS表示不存在任何一段中，SECT1表示在本文件第一段中。UNDEF表示未定义的。&lt;/p&gt;
+
+&lt;p&gt;第四列为符号的类型，notype为变量，notype()表示函数，只有两种类型。&lt;/p&gt;
+
+&lt;p&gt;第五列为符号的可见范围，static为局部变量，External为全局变量。&lt;/p&gt;
+
+&lt;p&gt;第六列为符号的符号名。&lt;/p&gt;</content><category term="windows" /><summary>Contents</summary></entry><entry><title>在main函数之前执行一些函数</title><link href="/%E5%9C%A8main%E5%87%BD%E6%95%B0%E4%B9%8B%E5%89%8D%E6%89%A7%E8%A1%8C%E4%B8%80%E4%BA%9B%E5%87%BD%E6%95%B0/" rel="alternate" type="text/html" title="在main函数之前执行一些函数" /><published>2015-07-24T21:54:00+08:00</published><updated>2015-07-24T21:54:00+08:00</updated><id>/在main函数之前执行一些函数</id><content type="html" xml:base="/%E5%9C%A8main%E5%87%BD%E6%95%B0%E4%B9%8B%E5%89%8D%E6%89%A7%E8%A1%8C%E4%B8%80%E4%BA%9B%E5%87%BD%E6%95%B0/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;前言&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;解决方法&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-2&quot; id=&quot;markdown-toc-section-2&quot;&gt;结论&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[21:42]&lt;/p&gt;
+
+&lt;h1 id=&quot;section&quot;&gt;前言&lt;/h1&gt;
+
+&lt;p&gt;在看书的时候，突然想到如何在main函数之前执行一些函数呢？因为使用C++，下面主要针对于C++&lt;/p&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;解决方法&lt;/h1&gt;
+
+&lt;p&gt;在main之前运行函数，其实一种最简单的方法就是在定义一个全局变量，因为对于C++来说，全局变量的构造函数必须是在main之前调用的，在main结束之后，调用全局变量的析构函数。&lt;/p&gt;
+
+&lt;p&gt;上码：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class CTest
+{
+public:
+	CTest(void);
+	~CTest(void);
+};
+
+CTest::CTest(void)
+{
+	cout&amp;lt;&amp;lt;&quot;Before Main&quot;&amp;lt;&amp;lt;endl;
+}
+
+
+CTest::~CTest(void)
+{
+	cout&amp;lt;&amp;lt;&quot;End Main&quot;&amp;lt;&amp;lt;endl;
+}
+
+CTest test;
+
+int main()
+{
+	std::cout&amp;lt;&amp;lt;&quot;Main ing&quot;&amp;lt;&amp;lt;std::endl;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;结果就是：
+&lt;img src=&quot;http://img.blog.csdn.net/20150709214015458&quot; alt=&quot;img&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;section-2&quot;&gt;结论&lt;/h1&gt;
+
+&lt;p&gt;这样就可以在main函数之前或者之后进行调用一些函数，进行一些初始化工作等。&lt;/p&gt;</content><category term="c++" /><summary>Contents</summary></entry><entry><title>定义自己的Debug信息</title><link href="/%E5%AE%9A%E4%B9%89%E8%87%AA%E5%B7%B1%E7%9A%84Debug%E4%BF%A1%E6%81%AF/" rel="alternate" type="text/html" title="定义自己的Debug信息" /><published>2015-07-02T21:32:00+08:00</published><updated>2015-07-02T21:32:00+08:00</updated><id>/定义自己的Debug信息</id><content type="html" xml:base="/%E5%AE%9A%E4%B9%89%E8%87%AA%E5%B7%B1%E7%9A%84Debug%E4%BF%A1%E6%81%AF/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#debug&quot; id=&quot;markdown-toc-debug&quot;&gt;定义自己的Debug函数&lt;/a&gt;    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;追踪函数&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#bug&quot; id=&quot;markdown-toc-bug&quot;&gt;Bug信息输出&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;总结&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[21:32]&lt;/p&gt;
+
+&lt;h2 id=&quot;debug&quot;&gt;定义自己的Debug函数&lt;/h2&gt;
+
+&lt;p&gt;在编写程序，希望自己的调试信息，并依此跟踪程序出现的问题。因此需要定义自己的Debug函数，以便自己更好的分析问题的所在。下面是自己用的Debug函数。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;追踪函数&lt;/h3&gt;
+
+&lt;p&gt;追踪函数主要用于确定是否进入函数内。用于定位是否已经进入到函数中。先码上代码。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;define DEFUBFILE &quot;D:\\Debug.log&quot;
+#define DEBUGTRACE(X) { \
+	QFile file(DEFUBFILE);\
+	file.open(QIODevice::ReadWrite | QIODevice::Append | 	QIODevice::Text);\
+	QTextStream out(&amp;amp;file);\
+	QString logTime = QDateTime::currentDateTime().toString(&quot;[yyyy-dd-MM hh:mm:ss.zzz]&quot;);\
+	QString result = QString(&quot;%1 :{ %2:%3---%4}&quot;).arg(X).arg(__FILE__).arg(__LINE__).arg(__FUNCTION__);\
+	out &amp;lt;&amp;lt; logTime &amp;lt;&amp;lt;&quot; &quot;&amp;lt;&amp;lt;  result &amp;lt;&amp;lt; endl; \
+	file.close();\
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;注意这里主要用Qt写的，因此用的话需要包含Qt的东西，当然也很容易修改成C++。这样在自己的函数中就可以这样写，如下代码
+&lt;code class=&quot;highlighter-rouge&quot;&gt;
+int func()
+{
+	DEBUGTRACE(&quot;ENTER&quot;);
+    //do something
+    DEBUGTRACE(&quot;LEAVE&quot;);
+}
+&lt;/code&gt;
+这样当判断是否调用某个函数的时候，就可以打开log,然后定位了。&lt;/p&gt;
+
+&lt;h3 id=&quot;bug&quot;&gt;Bug信息输出&lt;/h3&gt;
+&lt;p&gt;有了跟踪函数以后，需要把log信息打印出来，以各种形式打印出来，因此也需要定义自己的log信息输出函数。上码：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#define LOGWRITER(format,...) {\
+	char logBuffer[BUFFER_LENGTH] = {0};\
+	sprintf(logBuffer,format,## __VA_ARGS__);\
+	QString logTime = QDateTime::currentDateTime().toString(&quot;[yyyy-dd-MM hh:mm:ss.zzz]&quot;);\
+	QString result = QString(&quot;{ %1:%2---%3 }&quot;).arg(__FILE__).arg(__LINE__).arg(__FUNCTION__);\
+	QFile file(DEFUBFILE);\
+	file.open(QIODevice::ReadWrite | QIODevice::Append | QIODevice::Text);\
+	QTextStream out(&amp;amp;file);\
+	out&amp;lt;&amp;lt;logTime&amp;lt;&amp;lt;&quot; &quot;&amp;lt;&amp;lt;logBuffer&amp;lt;&amp;lt;&quot; :&quot;&amp;lt;&amp;lt;result&amp;lt;&amp;lt;endl;\
+	file.close();\
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这上面的代码使用了可变长参数的用法。因此可以像printf函数一样使用了。
+注意上面也是使用了Qt的一些东西，当然也非常容易的转化为C++代码。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;总结&lt;/h2&gt;
+&lt;p&gt;也许程序中用了日记系统，例如log4Cpp等这样的日记系统，但是有时非常大，而我们仅仅需要一种比较简单的方式记录一些调试信息而已，不会去考虑多线程之类的各种情况。&lt;/p&gt;</content><category term="windows" /><summary>Contents</summary></entry><entry><title>UNIX网络编程卷一（套接字联网API）</title><link href="/UNIX%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B%E5%8D%B7%E4%B8%80-%E5%A5%97%E6%8E%A5%E5%AD%97%E8%81%94%E7%BD%91API/" rel="alternate" type="text/html" title="UNIX网络编程卷一（套接字联网API）" /><published>2015-06-25T22:18:00+08:00</published><updated>2015-06-25T22:18:00+08:00</updated><id>/UNIX网络编程卷一（套接字联网API）</id><content type="html" xml:base="/UNIX%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B%E5%8D%B7%E4%B8%80-%E5%A5%97%E6%8E%A5%E5%AD%97%E8%81%94%E7%BD%91API/">&lt;section id=&quot;table-of-contents&quot; class=&quot;toc&quot;&gt;
+  &lt;header&gt;
+    &lt;h3&gt;&lt;i class=&quot;fa fa-book&quot;&gt;&lt;/i&gt; Contents&lt;/h3&gt;
+  &lt;/header&gt;
+&lt;div id=&quot;drawer&quot;&gt;
+&lt;ul id=&quot;markdown-toc&quot;&gt;
+  &lt;li&gt;&lt;a href=&quot;#section&quot; id=&quot;markdown-toc-section&quot;&gt;目的&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-1&quot; id=&quot;markdown-toc-section-1&quot;&gt;背景&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#tcpip&quot; id=&quot;markdown-toc-tcpip&quot;&gt;TCP/IP协议&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#section-2&quot; id=&quot;markdown-toc-section-2&quot;&gt;注意&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;!-- /#table-of-contents --&gt;
+
+&lt;p&gt;[10:18 PM]&lt;/p&gt;
+
+&lt;h1 id=&quot;section&quot;&gt;目的&lt;/h1&gt;
+&lt;p&gt;在工作中，对于网络编程理解运用还是不够好，因此学习这边经典的书籍，加深自己对网络编程的理解。不管现在运用的的是ACE或者ZQT框架，最基本的还是套接字。&lt;/p&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;背景&lt;/h1&gt;
+&lt;p&gt;两个程序进行通信，与两个人进行通话想通的，若是两个人用不同言语进行谈话，那么就是鸡同鸭讲，完成不知其所云，而两个程序通信也是一样的，必须规定好交流的“协议”，其实“协议”就是一套准则，例如两个人都用普通话进行交流，普通话就是协议。&lt;/p&gt;
+
+&lt;h1 id=&quot;tcpip&quot;&gt;TCP/IP协议&lt;/h1&gt;
+&lt;p&gt;由于本书主要讲解TCP/IP协议，因此注重点也是TCP/IP，TCP/IP是用很广的协议。其实很多的网络程序，都是基于该协议。&lt;/p&gt;
+
+&lt;p&gt;用Windows的API编写一个简单的TCP/IP程序（在书中是使用Linux的API完成的，由于用的是Windows，懒得换到Linux，所以就····）&lt;/p&gt;
+
+&lt;p&gt;服务端的代码&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;Windows.h&amp;gt;
+#include &amp;lt;time.h&amp;gt;
+
+#pragma    comment(lib,&quot;ws2_32.lib&quot;) 
+using namespace std;
+
+#define  PORT 4000
+#define  IP_ADDRESS &quot;135.124.2.22&quot;
+int main(int argc, char* argv[])
+{
+WSADATA  Ws;
+SOCKET ServerSocket, CientSocket;
+struct sockaddr_in LocalAddr, ClientAddr;
+int Ret = 0;
+int AddrLen = 0;
+
+
+//Init Windows Socket
+if ( WSAStartup(MAKEWORD(2,2), &amp;amp;Ws) != 0 )
+{
+	cout&amp;lt;&amp;lt;&quot;Init Windows Socket Failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+
+//Create Socket
+ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+if ( ServerSocket == INVALID_SOCKET )
+{
+	cout&amp;lt;&amp;lt;&quot;Create Socket Failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+
+LocalAddr.sin_family = AF_INET;
+LocalAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+LocalAddr.sin_port = htons(PORT);
+memset(LocalAddr.sin_zero, 0x00, 8);
+
+//Bind Socket
+Ret = bind(ServerSocket, (struct sockaddr*)&amp;amp;LocalAddr, sizeof(LocalAddr));
+if ( Ret != 0 )
+{
+	cout&amp;lt;&amp;lt;&quot;Bind Socket Failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+
+Ret = listen(ServerSocket, 10);
+if ( Ret != 0 )
+{
+	cout&amp;lt;&amp;lt;&quot;listen Socket Failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+
+cout&amp;lt;&amp;lt;&quot;服务端已经启动&quot;&amp;lt;&amp;lt;endl;
+
+AddrLen = sizeof(ClientAddr);
+CientSocket = accept(ServerSocket, (struct sockaddr*)&amp;amp;ClientAddr, &amp;amp;AddrLen);
+if ( CientSocket == INVALID_SOCKET )
+{
+	cout&amp;lt;&amp;lt;&quot;Accept Failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+}
+
+cout&amp;lt;&amp;lt;&quot;客户端连接::&quot;&amp;lt;&amp;lt;inet_ntoa(ClientAddr.sin_addr)&amp;lt;&amp;lt;&quot;:&quot;&amp;lt;&amp;lt;ClientAddr.sin_port&amp;lt;&amp;lt;endl;
+
+
+//获取系统时间
+time_t t = time(0);
+char szTime[64] = {0};
+strftime(szTime,sizeof(szTime),&quot;%Y/%m/%d %X %A 本年第%j天 %z&quot;,localtime(&amp;amp;t));
+
+//把系统时间发送给客户端
+Ret = send(CientSocket, szTime, (int)strlen(szTime), 0);
+if ( Ret == 0 )
+{
+	cout&amp;lt;&amp;lt;&quot;Send Info Complete!&quot;&amp;lt;&amp;lt;endl;
+}
+else
+{
+	cout&amp;lt;&amp;lt;&quot;Send Info Err!&quot;&amp;lt;&amp;lt;endl;
+}
+closesocket(ServerSocket);
+closesocket(CientSocket);
+WSACleanup();
+
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;客户端的代码&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;Windows.h&amp;gt;
+#pragma    comment(lib,&quot;ws2_32.lib&quot;)
+using namespace std;
+
+#define IP_ADDRESS &quot;135.124.2.22&quot;
+#define PORT 4000
+
+int main( int argc , char* argv[] )
+{
+WSADATA ws;
+
+if ( WSAStartup(MAKEWORD(2,2),&amp;amp;ws) != 0 )
+{
+	cout&amp;lt;&amp;lt;&quot;Init Windows Socket Failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+
+SOCKET CientSocket;
+CientSocket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+if ( INVALID_SOCKET == CientSocket )
+{
+	cout&amp;lt;&amp;lt;&quot;create socket failed::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+
+struct sockaddr_in ServerAddr;
+ServerAddr.sin_family = AF_INET;
+ServerAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+ServerAddr.sin_port = htons(PORT);
+memset(ServerAddr.sin_zero, 0x00, 8);
+
+int Ret = 0;
+Ret = connect(CientSocket,(struct sockaddr*)&amp;amp;ServerAddr,sizeof(ServerAddr));
+if ( SOCKET_ERROR == Ret )
+{
+	cout&amp;lt;&amp;lt;&quot;Connect Error::&quot;&amp;lt;&amp;lt;GetLastError()&amp;lt;&amp;lt;endl;
+	return -1;
+}
+else
+{
+	cout&amp;lt;&amp;lt;&quot;连接成功!&quot;&amp;lt;&amp;lt;endl;
+}
+char RecvBuffer[MAX_PATH];
+
+memset(RecvBuffer, 0x00, sizeof(RecvBuffer));
+recv(CientSocket, RecvBuffer, MAX_PATH, 0)	
+cout&amp;lt;&amp;lt;&quot;接收到时间信息为:&quot;&amp;lt;&amp;lt;SendBuffer&amp;lt;&amp;lt;endl;
+closesocket(CientSocket);
+WSACleanup();
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;当然前面的代码有很多的漏洞，比如Recv函数等等，但是这个也仅仅是一个小小例子，（但是代码要保护，，，，，，，，，）。&lt;/p&gt;
+
+&lt;h1 id=&quot;section-2&quot;&gt;注意&lt;/h1&gt;
+&lt;p&gt;使用TCP时必须小心，因为TCP是一个没有记录边界的字节流协议。（没有边界哦），如果要发送的信息量很大的话，并不保证一次性接收完所有的信息，所以，要循环的接收。&lt;/p&gt;</content><category term="windows" /><summary>Contents</summary></entry></feed>

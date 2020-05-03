@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>log4Cpp学习（一）了解log4Cpp &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="log4cpp">
+    <link rel="canonical" href="/log4Cpp%E5%AD%A6%E4%B9%A0-%E4%B8%80-%E4%BA%86%E8%A7%A3log4Cpp/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="log4Cpp学习（一）了解log4Cpp">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="log4Cpp学习（一）了解log4Cpp">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/log4Cpp%E5%AD%A6%E4%B9%A0-%E4%B8%80-%E4%BA%86%E8%A7%A3log4Cpp/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>log4Cpp学习（一）了解log4Cpp</h1>
+            <h4>23 Mar 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">前言</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">介绍</a></li>
+  <li><a href="#section-2" id="markdown-toc-section-2">安装</a></li>
+  <li><a href="#section-3" id="markdown-toc-section-3">运行一个小例子</a></li>
+  <li><a href="#section-4" id="markdown-toc-section-4">结论</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[10:57 PM]</p>
+
+<h1 id="section">前言</h1>
+<p>在项目中需要用到日记系统，上网查了一下，感觉log4cpp比较好，就学习一下，顺便看看其的代码架构，提高自己。</p>
+
+<h1 id="section-1">介绍</h1>
+<p>log4cplus 是 C++编写的开源日志系统， 前身是 java 编写的 log4j 日志系统。 log4cplus 具有<strong>线程安全、灵活、以及多粒度控制</strong>的特点，通过将信息划分优先级使其可以面向程序调试、运行、测试、和维护等全生命周期； 可以选择将信息输出到屏幕、文件、NT event log、甚至是远程服务器；通过指定策略对日志进行定期备份等等。</p>
+
+<blockquote>
+  <p>下载地址：http://log4cplus.sourceforge.net，下载log4cplus-x.x.x，我下载是log4cplus-1.2.0-rc3。</p>
+</blockquote>
+
+<h1 id="section-2">安装</h1>
+<p>本人主要是在Windows+VS2010上开发的，所以主要说该平台下的安装，若是Linux安装，可以参考log4cpp帮助手册。
+*解压你下载的文件，打开文件夹，可以看到如下的文件，（注意msvc10文件夹，需要用VS2010编译出动态库）。
+<img src="http://img.blog.csdn.net/20150323221115468" alt="这里写图片描述" />
+*打开msvc10文件夹，并用VS2010打开其的解决方案。
+<img src="http://img.blog.csdn.net/20150323221652086" alt="这里写图片描述" />
+*注意，其中含有log4cplus(用于动态链接）、log4cpluS（用于静态链接）、loggingserver(用于服务器)。
+编译！！！
+*把生成dll以及头文件加入VS目录中。
+<img src="http://img.blog.csdn.net/20150323222838440" alt="这里写图片描述" />
+这里建立一个文件夹，放置在此，然后工程中增加相应的搜索路径。
+<img src="http://img.blog.csdn.net/20150323223043614" alt="这里写图片描述" /></p>
+
+<h1 id="section-3">运行一个小例子</h1>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#include &lt;log4cplus/logger.h&gt;
+#include &lt;log4cplus/fileappender.h&gt;
+#include &lt;log4cplus/loggingmacros.h&gt;
+
+using namespace log4cplus;
+
+int main()
+{
+	/* step 1: Instantiate an appender object */
+	SharedAppenderPtr _append(new FileAppender("Test.log"));
+	_append-&gt;setName("file log test");
+
+	/* step 4: Instantiate a logger object */
+	Logger _logger = Logger::getInstance("test.subtestof_filelog");
+
+	/* step 5: Attach the appender object to the logger  */
+	_logger.addAppender(_append);
+
+	/* log activity */
+	int i;
+	for( i = 0; i &lt; 5; ++i )
+	{
+		LOG4CPLUS_DEBUG(_logger, "Entering loop #" &lt;&lt; i &lt;&lt; "End line #");
+	}
+	return 0;
+}
+</code></pre>
+</div>
+<p>运行结果：
+<img src="http://img.blog.csdn.net/20150324210926565" alt="这里写图片描述" />
+DEBUG - Entering loop #0End line #
+DEBUG - Entering loop #1End line #
+DEBUG - Entering loop #2End line #
+DEBUG - Entering loop #3End line #
+DEBUG - Entering loop #4End line #</p>
+
+<h1 id="section-4">结论</h1>
+<p>其实log4cpp还是很好用的嘛~~</p>
+
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

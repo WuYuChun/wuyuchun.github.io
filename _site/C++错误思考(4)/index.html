@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>C++错误思考(4) &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="C++">
+    <link rel="canonical" href="/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="C++错误思考(4)">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="C++错误思考(4)">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>C++错误思考(4)</h1>
+            <h4>07 Sep 2016</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">前言</a></li>
+  <li><a href="#void-" id="markdown-toc-void-">第一种情况：以void *为主导</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">第二种 截断问题</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[11:11 PM PM]</p>
+
+<h1 id="section">前言</h1>
+<p>C++是一个静态类别的语音，也就是说在编译的时候，会对其类型进行检查。但是C++又是一个灵活性极高的语言，因此就是
+出现<strong>破坏静态类型安全的编码</strong>。</p>
+
+<h1 id="void-">第一种情况：以void *为主导</h1>
+<p>在强制类型转换中，转换到void *类型的结果会将类型的指针的类型信息都会抹除。同时，存在的情况是，基类与派生类之间的转换。
+在《探索C++内存模型》中说道基类与派生类之间的内存模型。如下：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left"> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">基类class子对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">派生类成员</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>当然这是在单继承情况下。若是多继承呢？ <em>在多继承条件下，单一对象往往有多个合法地址</em></p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left"> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">基类subject类型的子对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">基类button类型的子对象</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">派生类成员</td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p>在接口中使用void *作为类型转换的中介类型，并要求用户在调用接口中的某一个函数时重新提供另一个函数抹除的类型信息，
+这终究不是办法</p>
+</blockquote>
+
+<h1 id="section-1">第二种 截断问题</h1>
+
+<p>发生的时机：<em>企图把一个派生类对象的内容复制到另一个基类对象的存储的时刻</em>
+发生的后果：<em>那些派生类型专属的成员数据和成员函数会被截断</em>。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class Employee{
+public:
+    vitual ~Employee();
+    vitual void pay() const;
+protect:
+    void setType( int type){
+        myType_ = type;
+    }
+private:
+    int myType_ ; //不好的的用法
+};
+
+calss Salaried:public Employee{
+    //...
+};
+
+Employee employee;
+Salaried salaried;
+employee = salaried; //发生什么，截断了
+
+</code></pre>
+</div>
+
+<p><em>Salaried 类型信息完全被隔离，虚函数表中根本没有放入Salaried类型所指定对应函数入口地址</em></p>
+
+<p>这里也提出一个问题：在设计的时候，要保证截断情况保持赋值结果的状态的合法性。</p>
+
+<hr />
+<p>截断问题的最常见来源，是一个派生类的class类对象被以传值方式传递给一个基类的形参</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>void fire( Employee victim);
+fire(salaried); //被截断
+
+</code></pre>
+</div>
+<p><strong>解决方法：传递引用或指针</strong>
+—-</p>
+
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

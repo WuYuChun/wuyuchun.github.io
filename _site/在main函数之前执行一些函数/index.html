@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>在main函数之前执行一些函数 &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="c++">
+    <link rel="canonical" href="/%E5%9C%A8main%E5%87%BD%E6%95%B0%E4%B9%8B%E5%89%8D%E6%89%A7%E8%A1%8C%E4%B8%80%E4%BA%9B%E5%87%BD%E6%95%B0/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="在main函数之前执行一些函数">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="在main函数之前执行一些函数">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/%E5%9C%A8main%E5%87%BD%E6%95%B0%E4%B9%8B%E5%89%8D%E6%89%A7%E8%A1%8C%E4%B8%80%E4%BA%9B%E5%87%BD%E6%95%B0/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>在main函数之前执行一些函数</h1>
+            <h4>24 Jul 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">前言</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">解决方法</a></li>
+  <li><a href="#section-2" id="markdown-toc-section-2">结论</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[21:42]</p>
+
+<h1 id="section">前言</h1>
+
+<p>在看书的时候，突然想到如何在main函数之前执行一些函数呢？因为使用C++，下面主要针对于C++</p>
+
+<h1 id="section-1">解决方法</h1>
+
+<p>在main之前运行函数，其实一种最简单的方法就是在定义一个全局变量，因为对于C++来说，全局变量的构造函数必须是在main之前调用的，在main结束之后，调用全局变量的析构函数。</p>
+
+<p>上码：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class CTest
+{
+public:
+	CTest(void);
+	~CTest(void);
+};
+
+CTest::CTest(void)
+{
+	cout&lt;&lt;"Before Main"&lt;&lt;endl;
+}
+
+
+CTest::~CTest(void)
+{
+	cout&lt;&lt;"End Main"&lt;&lt;endl;
+}
+
+CTest test;
+
+int main()
+{
+	std::cout&lt;&lt;"Main ing"&lt;&lt;std::endl;
+}
+</code></pre>
+</div>
+<p>结果就是：
+<img src="http://img.blog.csdn.net/20150709214015458" alt="img" /></p>
+
+<h1 id="section-2">结论</h1>
+
+<p>这样就可以在main函数之前或者之后进行调用一些函数，进行一些初始化工作等。</p>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

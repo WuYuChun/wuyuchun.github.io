@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>VS2010安装ACE6.3.0 &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="windows, ACE">
+    <link rel="canonical" href="/VS2010%E5%AE%89%E8%A3%85ACE6.3.0/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="VS2010安装ACE6.3.0">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="VS2010安装ACE6.3.0">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/VS2010%E5%AE%89%E8%A3%85ACE6.3.0/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>VS2010安装ACE6.3.0</h1>
+            <h4>02 May 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#ace" id="markdown-toc-ace">获取ACE</a></li>
+  <li><a href="#ace-1" id="markdown-toc-ace-1">编译ACE</a></li>
+  <li><a href="#section" id="markdown-toc-section">验证</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[00:14 PM]</p>
+
+<h1 id="ace">获取ACE</h1>
+
+<p>网址为下面：
+&gt; http://www.cse.wustl.edu/~schmidt/ACE.html
+<img src="http://img.blog.csdn.net/20150502000536028" alt="网页的样子" /></p>
+
+<p>此时最新版本为6.3.0
+下载解压后，打开文件ACE-6.3.0\ACE_wrappers\ace
+可以看到用VS解决方案。</p>
+
+<h1 id="ace-1">编译ACE</h1>
+<p>....\ace目录下新建config.h文件，文件内容：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>// config.h  
+#define ACE_HAS_STANDARD_CPP_LIBRARY 1 // 用于标准C++跨平台  
+#include "ace/config-win32.h" // 在WIN32环境下使用ACE  
+#define ACE_USE_WCHAR  
+#define ACE_HAS_WCHAR // 支持unicode 
+</code></pre>
+</div>
+<p>但是这里是VS11，VS12,本人使用的VS10（如何转化请看另一篇！）。
+编译该项目即可在ACE_ROOT\lib下生成所需要的ACEd.dll和ACEd.lib文件（Debug版本的为ACEd.dll ACEd.lib，Release版本的为ACE.dll ACE.lib）
+可以以此对该解决方案下其他项目做同样设置，编译生成自己需要的dll和lib。
+<img src="http://img.blog.csdn.net/20150502001353373" alt="用VS2010编译" /></p>
+
+<h1 id="section">验证</h1>
+
+<p>上代码：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#include "stdafx.h"
+#include &lt;ace\Log_Msg.h&gt;  
+ 
+int _tmain(int argc, _TCHAR* argv[])
+{
+	ACE_DEBUG((LM_DEBUG, "ACE_DEBUG测试\n")); 
+	return 0;
+}
+
+</code></pre>
+</div>
+
+<p>截图：
+<img src="http://img.blog.csdn.net/20150503152147470" alt="运行结果图" /></p>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

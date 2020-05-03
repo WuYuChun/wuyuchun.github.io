@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>log4Cpp学习（三）—ConsoleAppender类 &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="windows">
+    <link rel="canonical" href="/log4Cpp%E5%AD%A6%E4%B9%A0-%E4%B8%89-ConsoleAppender%E7%B1%BB/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="log4Cpp学习（三）—ConsoleAppender类">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="log4Cpp学习（三）—ConsoleAppender类">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/log4Cpp%E5%AD%A6%E4%B9%A0-%E4%B8%89-ConsoleAppender%E7%B1%BB/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>log4Cpp学习（三）—ConsoleAppender类</h1>
+            <h4>14 Apr 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">前言</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">摘要</a></li>
+  <li><a href="#consoleappender" id="markdown-toc-consoleappender">ConsoleAppender类</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[10:23 PM]</p>
+
+<h1 id="section">前言</h1>
+<p>学习别人的代码也是一种提高。</p>
+
+<h1 id="section-1">摘要</h1>
+<p>在使用log4Cpp的过程中，Appender是一个非常重要的类，因为<strong>其解决把日记输出到哪里的问题</strong>，输出的地方当然很多了（也不算很多），例如控制台、文件等。而ConsoleAppender就是一个把log输出到控制台的类。见下图（比较粗糙）。
+<img src="http://img.blog.csdn.net/20150414222247535" alt="这里写图片描述" /></p>
+
+<h1 id="consoleappender">ConsoleAppender类</h1>
+<p>ConsoleAppender是把日记信息输出到控制台，是向std::cout或者std::cerr。</p>
+
+<p>借用前面的例子，来讲解ConsoleAppender的内部实现</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>    //第一步
+    SharedObjectPtr&lt;Appender&gt; _append(new ConsoleAppender());
+    _append-&gt;setName("append for test");
+     
+    //第二步
+    std::string pattern = "";
+    std::auto_ptr&lt;Layout&gt; _layout(new PatternLayout(pattern));
+
+     //第三步
+    _append-&gt;setLayout(_layout);
+
+     //第四步
+    Logger _logger = Logger::getInstance("test");
+
+     //第五步
+    _logger.addAppender(_append);
+
+    _logger.setLogLevel(ALL_LOG_LEVEL);
+
+      //第六步
+    LOG4CPLUS_DEBUG(_logger,"This is the First Log Message...");
+    
+    Sleep(1);
+
+    LOG4CPLUS_DEBUG(_logger,"This is the Second Log Message...");
+
+    getchar();
+</code></pre>
+</div>
+<p>声明一个SharedObjectPtr的Appender指针，可以看上面图中的继承关系。
+看其的构造函数（含义非常清楚）：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>ConsoleAppender(bool logToStdErr = false, 
+                bool immediateFlush = false);
+ConsoleAppender::ConsoleAppender(bool logToStdErr_,
+    bool immediateFlush_)
+: logToStdErr(logToStdErr_),
+  immediateFlush(immediateFlush_)
+{
+}               
+</code></pre>
+</div>
+
+<p>它的数据成员：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>        bool logToStdErr; //用于控制想哪个输出流输出
+        bool immediateFlush; //用于控制是否每一次输出都刷新
+</code></pre>
+</div>
+<p>每一个Appender都有自己名字，用于其他组件识别是那个Appender，
+看看SetName的函数定义，其实SetName在Appender中定义为一个虚函数。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code> /**
+ * Set the name of this appender. The name is used by other
+ * components to identify this appender.
+ */
+  virtual void setName(const log4cplus::tstring&amp; name);
+
+void
+Appender::setName(const log4cplus::tstring&amp; n)
+{
+    this-&gt;name = n; //name 为Appender的一个属性
+}
+</code></pre>
+</div>
+
+<p>第二步涉及布局类，等以后再学习这个类。
+看第三步</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>/**
+* Set the layout for this appender. Note that some *appenders have
+* their own (fixed) layouts or do not use one. For example, *the SocketAppender ignores the layout set here.
+*/
+ virtual void setLayout(std::auto_ptr&lt;Layout&gt; layout);
+ void
+Appender::setLayout(std::auto_ptr&lt;Layout&gt; lo)
+{
+    thread::MutexGuard guard (access_mutex); //防止多线程
+    this-&gt;layout = lo;
+}
+</code></pre>
+</div>
+<p>看看第五步，至于Logger类，以后再学习</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>// AppenderAttachable Methods
+ virtual void addAppender(SharedAppenderPtr newAppender);
+ void 
+Logger::addAppender (SharedAppenderPtr newAppender)
+{
+    value-&gt;addAppender(newAppender);
+}
+</code></pre>
+</div>
+<p>看看宏LOG4CPLUS_DEBUG，其的定义如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#define LOG4CPLUS_DEBUG(logger, logEvent)                               \
+    LOG4CPLUS_MACRO_BODY (logger, logEvent, DEBUG_LOG_LEVEL)
+
+#define LOG4CPLUS_MACRO_BODY(logger, logEvent, logLevel)                \
+    LOG4CPLUS_SUPPRESS_DOWHILE_WARNING()                                \
+    do {                                                                \
+        log4cplus::Logger const &amp; _l                                    \
+            = log4cplus::detail::macros_get_logger (logger);            \
+        if (LOG4CPLUS_MACRO_LOGLEVEL_PRED (                             \
+                _l.isEnabledFor (log4cplus::logLevel), logLevel)) {     \
+            LOG4CPLUS_MACRO_INSTANTIATE_OSTRINGSTREAM (_log4cplus_buf); \
+            _log4cplus_buf &lt;&lt; logEvent;                                 \
+            log4cplus::detail::macro_forced_log (_l,                    \
+                log4cplus::logLevel, _log4cplus_buf.str(),              \
+                __FILE__, __LINE__, LOG4CPLUS_MACRO_FUNCTION ());       \
+        }                                                               \
+    } while (0)                                                         \
+    LOG4CPLUS_RESTORE_DOWHILE_WARNING()
+
+</code></pre>
+</div>
+
+<p>其实关键是下面的语句</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code> _log4cplus_buf &lt;&lt; logEvent;                                 \
+            log4cplus::detail::macro_forced_log (_l,                    \
+                log4cplus::logLevel, _log4cplus_buf.str(),              \
+                __FILE__, __LINE__, LOG4CPLUS_MACRO_FUNCTION ());  
+</code></pre>
+</div>
+<p><strong>若是自己觉得log4Cpp很大的话，其实可以根据这个的仿写自己的一个简单的日记宏</strong></p>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

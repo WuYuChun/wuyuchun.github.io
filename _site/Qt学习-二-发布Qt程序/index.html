@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>Qt学习（二）—发布Qt程序 &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="Qt">
+    <link rel="canonical" href="/Qt%E5%AD%A6%E4%B9%A0-%E4%BA%8C-%E5%8F%91%E5%B8%83Qt%E7%A8%8B%E5%BA%8F/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="Qt学习（二）—发布Qt程序">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Qt学习（二）—发布Qt程序">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/Qt%E5%AD%A6%E4%B9%A0-%E4%BA%8C-%E5%8F%91%E5%B8%83Qt%E7%A8%8B%E5%BA%8F/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>Qt学习（二）—发布Qt程序</h1>
+            <h4>05 Apr 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#qt" id="markdown-toc-qt">发布Qt程序</a>    <ul>
+      <li><a href="#section" id="markdown-toc-section">前提</a></li>
+      <li><a href="#depends" id="markdown-toc-depends">步骤一（depends）：</a></li>
+      <li><a href="#process-explorer" id="markdown-toc-process-explorer">步骤二（Process Explorer）</a></li>
+      <li><a href="#section-1" id="markdown-toc-section-1">验证</a></li>
+      <li><a href="#section-2" id="markdown-toc-section-2">最后</a></li>
+    </ul>
+  </li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[00:54 PM]</p>
+
+<h1 id="qt">发布Qt程序</h1>
+<div class="highlighter-rouge"><pre class="highlight"><code>弄了一个小工具，准备给其他人用，于是要打包（免安装版的）。下面是自己弄发布的心得，以及注意事项。
+</code></pre>
+</div>
+
+<h2 id="section">前提</h2>
+<div class="highlighter-rouge"><pre class="highlight"><code>其他的机器上没有装Qt，还有可能任何编译程序的环境都没有了。是一个非常“干净”的机子，自己的环境 VS+Qt4.8.0!
+</code></pre>
+</div>
+
+<h2 id="depends">步骤一（depends）：</h2>
+<div class="highlighter-rouge"><pre class="highlight"><code>利用depends工具（网上直接下载），查询自己的程序依赖哪些动态库。（程序运行都是依赖于动态库）。
+</code></pre>
+</div>
+
+<p><img src="http://img.blog.csdn.net/20150405003253370" alt="这里写图片描述" /></p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>从图中可以看到所依赖的动态库，然后在Qt安装目录中bin文件夹下找到相应的动态库。并拷到.exe文件中。
+</code></pre>
+</div>
+
+<p><img src="http://img.blog.csdn.net/20150405003918101" alt="这里写图片描述" /></p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>其中QtGuid4.dll是Debug版本的，其他的类似。
+当时以为这样就可以了，拿到机子上运行，发现点击后没有任何反应，程序没有启动起来。想了想是不是还需其他的动态库。接着就需要下面这个工具了。
+</code></pre>
+</div>
+
+<h2 id="process-explorer">步骤二（Process Explorer）</h2>
+<div class="highlighter-rouge"><pre class="highlight"><code>这个工具在网上也直接下载，在自己的机子上把程序运行起来，然后在这个工具上找到运行的程序（跟任务管理器是一样的！）。点击它，然后点击View菜单-&gt;Lower Pane View-&gt;Dll，就可以看到程序运行起来所依赖的动态库了。
+</code></pre>
+</div>
+
+<p><img src="http://img.blog.csdn.net/20150405004955455" alt="这里写图片描述" /></p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>从图中可以看出还缺少Qt插件，把Plusgins文件夹下的sqldrivers文件夹拷到.exe文件下，其他的也是类似的。
+</code></pre>
+</div>
+
+<h2 id="section-1">验证</h2>
+<div class="highlighter-rouge"><pre class="highlight"><code>把所需的dll拷到相应的文件夹下，拿到其他的机子上运行，果然成功运行起来，这样就可以给别人使用了。
+</code></pre>
+</div>
+
+<h2 id="section-2">最后</h2>
+<div class="highlighter-rouge"><pre class="highlight"><code>其实这个很简单，也可以使用打包工具对程序进行打包，然别人进行安装。只不过这个工具比较下，这样就可以了（绿色免安装版嘛）。
+</code></pre>
+</div>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>UNIX网络编程卷一（套接字联网API） &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="windows">
+    <link rel="canonical" href="/UNIX%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B%E5%8D%B7%E4%B8%80-%E5%A5%97%E6%8E%A5%E5%AD%97%E8%81%94%E7%BD%91API/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="UNIX网络编程卷一（套接字联网API）">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="UNIX网络编程卷一（套接字联网API）">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/UNIX%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B%E5%8D%B7%E4%B8%80-%E5%A5%97%E6%8E%A5%E5%AD%97%E8%81%94%E7%BD%91API/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>UNIX网络编程卷一（套接字联网API）</h1>
+            <h4>25 Jun 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">目的</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">背景</a></li>
+  <li><a href="#tcpip" id="markdown-toc-tcpip">TCP/IP协议</a></li>
+  <li><a href="#section-2" id="markdown-toc-section-2">注意</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[10:18 PM]</p>
+
+<h1 id="section">目的</h1>
+<p>在工作中，对于网络编程理解运用还是不够好，因此学习这边经典的书籍，加深自己对网络编程的理解。不管现在运用的的是ACE或者ZQT框架，最基本的还是套接字。</p>
+
+<h1 id="section-1">背景</h1>
+<p>两个程序进行通信，与两个人进行通话想通的，若是两个人用不同言语进行谈话，那么就是鸡同鸭讲，完成不知其所云，而两个程序通信也是一样的，必须规定好交流的“协议”，其实“协议”就是一套准则，例如两个人都用普通话进行交流，普通话就是协议。</p>
+
+<h1 id="tcpip">TCP/IP协议</h1>
+<p>由于本书主要讲解TCP/IP协议，因此注重点也是TCP/IP，TCP/IP是用很广的协议。其实很多的网络程序，都是基于该协议。</p>
+
+<p>用Windows的API编写一个简单的TCP/IP程序（在书中是使用Linux的API完成的，由于用的是Windows，懒得换到Linux，所以就····）</p>
+
+<p>服务端的代码</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#include &lt;iostream&gt;
+#include &lt;Windows.h&gt;
+#include &lt;time.h&gt;
+
+#pragma    comment(lib,"ws2_32.lib") 
+using namespace std;
+
+#define  PORT 4000
+#define  IP_ADDRESS "135.124.2.22"
+int main(int argc, char* argv[])
+{
+WSADATA  Ws;
+SOCKET ServerSocket, CientSocket;
+struct sockaddr_in LocalAddr, ClientAddr;
+int Ret = 0;
+int AddrLen = 0;
+
+
+//Init Windows Socket
+if ( WSAStartup(MAKEWORD(2,2), &amp;Ws) != 0 )
+{
+	cout&lt;&lt;"Init Windows Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+//Create Socket
+ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+if ( ServerSocket == INVALID_SOCKET )
+{
+	cout&lt;&lt;"Create Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+LocalAddr.sin_family = AF_INET;
+LocalAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+LocalAddr.sin_port = htons(PORT);
+memset(LocalAddr.sin_zero, 0x00, 8);
+
+//Bind Socket
+Ret = bind(ServerSocket, (struct sockaddr*)&amp;LocalAddr, sizeof(LocalAddr));
+if ( Ret != 0 )
+{
+	cout&lt;&lt;"Bind Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+Ret = listen(ServerSocket, 10);
+if ( Ret != 0 )
+{
+	cout&lt;&lt;"listen Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+cout&lt;&lt;"服务端已经启动"&lt;&lt;endl;
+
+AddrLen = sizeof(ClientAddr);
+CientSocket = accept(ServerSocket, (struct sockaddr*)&amp;ClientAddr, &amp;AddrLen);
+if ( CientSocket == INVALID_SOCKET )
+{
+	cout&lt;&lt;"Accept Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+}
+
+cout&lt;&lt;"客户端连接::"&lt;&lt;inet_ntoa(ClientAddr.sin_addr)&lt;&lt;":"&lt;&lt;ClientAddr.sin_port&lt;&lt;endl;
+
+
+//获取系统时间
+time_t t = time(0);
+char szTime[64] = {0};
+strftime(szTime,sizeof(szTime),"%Y/%m/%d %X %A 本年第%j天 %z",localtime(&amp;t));
+
+//把系统时间发送给客户端
+Ret = send(CientSocket, szTime, (int)strlen(szTime), 0);
+if ( Ret == 0 )
+{
+	cout&lt;&lt;"Send Info Complete!"&lt;&lt;endl;
+}
+else
+{
+	cout&lt;&lt;"Send Info Err!"&lt;&lt;endl;
+}
+closesocket(ServerSocket);
+closesocket(CientSocket);
+WSACleanup();
+
+return 0;
+}
+</code></pre>
+</div>
+
+<p>客户端的代码</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#include &lt;iostream&gt;
+#include &lt;Windows.h&gt;
+#pragma    comment(lib,"ws2_32.lib")
+using namespace std;
+
+#define IP_ADDRESS "135.124.2.22"
+#define PORT 4000
+
+int main( int argc , char* argv[] )
+{
+WSADATA ws;
+
+if ( WSAStartup(MAKEWORD(2,2),&amp;ws) != 0 )
+{
+	cout&lt;&lt;"Init Windows Socket Failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+SOCKET CientSocket;
+CientSocket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+if ( INVALID_SOCKET == CientSocket )
+{
+	cout&lt;&lt;"create socket failed::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+
+struct sockaddr_in ServerAddr;
+ServerAddr.sin_family = AF_INET;
+ServerAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+ServerAddr.sin_port = htons(PORT);
+memset(ServerAddr.sin_zero, 0x00, 8);
+
+int Ret = 0;
+Ret = connect(CientSocket,(struct sockaddr*)&amp;ServerAddr,sizeof(ServerAddr));
+if ( SOCKET_ERROR == Ret )
+{
+	cout&lt;&lt;"Connect Error::"&lt;&lt;GetLastError()&lt;&lt;endl;
+	return -1;
+}
+else
+{
+	cout&lt;&lt;"连接成功!"&lt;&lt;endl;
+}
+char RecvBuffer[MAX_PATH];
+
+memset(RecvBuffer, 0x00, sizeof(RecvBuffer));
+recv(CientSocket, RecvBuffer, MAX_PATH, 0)	
+cout&lt;&lt;"接收到时间信息为:"&lt;&lt;SendBuffer&lt;&lt;endl;
+closesocket(CientSocket);
+WSACleanup();
+return 0;
+}
+</code></pre>
+</div>
+
+<p>当然前面的代码有很多的漏洞，比如Recv函数等等，但是这个也仅仅是一个小小例子，（但是代码要保护，，，，，，，，，）。</p>
+
+<h1 id="section-2">注意</h1>
+<p>使用TCP时必须小心，因为TCP是一个没有记录边界的字节流协议。（没有边界哦），如果要发送的信息量很大的话，并不保证一次性接收完所有的信息，所以，要循环的接收。</p>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

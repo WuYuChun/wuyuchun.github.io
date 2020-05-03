@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>C++之运行时识别类型 &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="C++">
+    <link rel="canonical" href="/C++%E4%B9%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E8%AF%86%E5%88%AB%E7%B1%BB%E5%9E%8B/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="C++之运行时识别类型">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="C++之运行时识别类型">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/C++%E4%B9%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E8%AF%86%E5%88%AB%E7%B1%BB%E5%9E%8B/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>C++之运行时识别类型</h1>
+            <h4>08 Jun 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">目标</a></li>
+  <li><a href="#rtti" id="markdown-toc-rtti">RTTI的两种使用方法</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">总结</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[10:07 PM]</p>
+
+<h1 id="section">目标</h1>
+<p><strong>在我们只有一个指向基类的指针或者引用时确定一个对象的准确类型</strong>，虚函数机制可以帮助我们确定类是哪种类型，但是却远远不够。例如下面的代码：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class shape()
+{
+	shape();
+	~shape();
+	virtual void draw() = 0;
+}
+</code></pre>
+</div>
+
+<p>从这个基类派生出三种不同的类：circle、square、triangle。我们调用其中类的draw方法，即使用一个shape()的指针来调用，任然被正确调用。</p>
+
+<hr />
+<p><strong>注意</strong>：RTTI与异常一样，依赖驻留在虚函数表中的类型信息。如果试图在一个没有虚函数的类上用RTTI，就得不到预期的结果。(可以进行测试一下)</p>
+
+<hr />
+
+<h1 id="rtti">RTTI的两种使用方法</h1>
+<p>（1）使用typeid关键字，注意这是一个关键字，像sizeof一样。</p>
+
+<p>（2）“安全类型向下映射”，其实就是与“向上映射”相反。</p>
+
+<p><strong>实现的方法</strong>：创建一个函数来试着将 shape<em>指派为一个 circle</em> (在本例中 )，检查执行过程中的数据类型。如果这个函数返回一个地址，则成功；如果返回 NULL，说明我们并没有一个circle *对象。C++的RTII的“安全类型向下映射”就是按照这种“试探映射”函数的格式。例子：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>shape *sp = new circle;
+circle *cp = dynamic_cast&lt;circle*&gt;sp
+if(cp) cout&lt;&lt;"cast successful"
+</code></pre>
+</div>
+
+<p>见下面例子</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>class shape
+{
+protected:
+	static int count;
+public:
+shape()
+{
+	count++;
+}
+virtual ~shape() 
+{
+	count--;
+}
+virtual void draw() 
+{
+
+}
+};
+
+int shape::count = 0;
+
+class rectage:public shape
+{
+void operator=(rectage &amp;);
+protected:
+	static int count;
+public:
+rectage()
+{
+	count++;
+}
+~rectage()
+{
+	count--;
+}
+void draw()
+{
+	std::cout&lt;&lt;"~~~~~~"&lt;&lt;std::endl;
+}
+static int quatiy()
+{
+	return count;
+}
+};
+
+int rectage::count = 0;
+
+class circle:public shape
+{
+void operator=(rectage &amp;);
+protected:
+	static int count;
+public:
+circle()
+{
+	count++;
+}
+~circle()
+{
+	count--;
+}
+void draw()
+{
+	std::cout&lt;&lt;"~~~~~~"&lt;&lt;std::endl;
+}
+static int quatiy()
+{
+	return count;
+}
+};
+
+int circle::count = 0;
+
+int main( int argc , char *argv[] )
+{
+std::vector&lt;shape *&gt; vVal;
+time_t t;
+srand((unsigned)time(&amp;t));
+const int mod = 12;
+for ( int i = 0 ; i &lt; rand()%12; ++i )
+{
+	vVal.push_back((shape *)(new rectage));
+}
+for ( int j = 0; j &lt; rand()%12; ++j )
+{
+	vVal.push_back((shape *)(new circle));
+}
+int iRecCount = 0;
+int iCirCount = 0;
+for ( int u = 0; u &lt; vVal.size() ; ++u)
+{
+	if ( dynamic_cast&lt;rectage*&gt;(vVal.at(u)))
+	{
+		iRecCount++;
+	}
+
+	if ( dynamic_cast&lt;circle*&gt;(vVal.at(u)))
+	{
+		iCirCount++;
+	}
+}
+
+std::cout&lt;&lt;vVal.size()&lt;&lt;std::endl
+	&lt;&lt;iRecCount &lt;&lt;" == "&lt;&lt;rectage::quatiy()&lt;&lt;std::endl
+	&lt;&lt;iCirCount &lt;&lt;" == "&lt;&lt;circle::quatiy()&lt;&lt;"\n";
+
+
+	return EXIT_SUCCESS;
+}
+</code></pre>
+</div>
+
+<h1 id="section-1">总结</h1>
+<p>RIIT是C++的第二大特征（第一大特征是什么额？），上面只是大概的介绍了一下它，详细的使用见下面分解。</p>
+
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

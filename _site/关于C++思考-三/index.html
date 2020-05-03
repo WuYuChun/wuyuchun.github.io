@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>关于C++思考（三） – 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="C++">
+    <link rel="canonical" href="/%E5%85%B3%E4%BA%8EC++%E6%80%9D%E8%80%83-%E4%B8%89/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="关于C++思考（三）">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="关于C++思考（三）">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/%E5%85%B3%E4%BA%8EC++%E6%80%9D%E8%80%83-%E4%B8%89/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml">
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/">Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/">Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/">Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/">About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>关于C++思考（三）</h1>
+            <h4>26 Mar 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3>
+<i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">运算符重载</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">语法</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[10:25 PM]</p>
+
+<h1 id="section">运算符重载</h1>
+<p>运算符重载只是一种语法糖，所以了解是必须的，但是又不要有心里负担！
+	学到这里的时候，有两种情况：</p>
+
+<ol>
+  <li>对于运算符重载，人们容易变得过于热心。首先，它是一个娱乐玩具。注意，它仅仅是一个语法修饰，是另外一种调用函数的方法而已。用这种眼光看，没有理由重载一个运算符，除非它会使包含我们的类的代码变得更易写，尤其是更易读。 （记住，读代码的情况更多）如果不是这种情况，就不必麻烦去重载运算符。</li>
+  <li>对于运算符重载，另外一个通常的反映是恐慌：突然， C运算符不再有熟悉的意思。 “所有的东西都改变了，我的所有 C代码将做不同的事情！”但这不是事实。所有用于仅包含内部数据类型的表达式的运算符是不可能被改变的。我们永远不能重载下面的运算符使执行的行为不同。
+1 « 4;
+或者重载运算符使得下面的表达式有意义。
+1.414 « 2;
+仅仅是包含用户自定义类型的表达式可以有重载的运算符。</li>
+</ol>
+
+<h1 id="section-1">语法</h1>
+<p>定义一个重载运算符就像定义一个函数，只是该函数的名字是 o p e r a t o r @，这里 @代表运算符。函数参数表中参数的个数取决于两个因素：
+1) 运算符是一元的（一个参数）还是二元的（两个参数）。
+2) 运算符被定义为全局函数（对于一元是一个参数，对于二元是两个参数）还是成员函数（对于一元没有参数，对于二元是一个参数 — 对象变为左侧参数） 。</p>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

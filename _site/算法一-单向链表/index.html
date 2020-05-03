@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta http-equiv=X-UA-Compatible content="IE=edge,chrome=1">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <title>《算法一》—单向链表 &#8211; 西电托儿所</title>
+    <meta name="description" content="       Contents    ">
+    <meta name="keywords" content="算法">
+    <link rel="canonical" href="/%E7%AE%97%E6%B3%95%E4%B8%80-%E5%8D%95%E5%90%91%E9%93%BE%E8%A1%A8/">
+        <!-- Twitter Cards -->
+    <meta name="twitter:title" content="《算法一》—单向链表">
+    <meta name="twitter:description" content="       Contents    ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/img/Logo.png">
+    <!-- Open Graph -->
+    <meta property="og:locale" content="utf-8">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="《算法一》—单向链表">
+    <meta property="og:description" content="       Contents    ">
+    <meta property="og:url" content="/%E7%AE%97%E6%B3%95%E4%B8%80-%E5%8D%95%E5%90%91%E9%93%BE%E8%A1%A8/">
+    <meta property="og:site_name" content="西电托儿所">
+    <meta property="og:image" content="/assets/img/Logo.png">
+
+    
+    
+    <!-- Handheld -->
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/assets/img/favicon/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/img/favicon/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/img/favicon/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/img/favicon/apple-touch-icon-144x144.png">
+    <link rel="icon" type="image/png" href="/assets/img/favicon/favicon.png">
+    <link rel="shortcut icon" href="/assets/img/favicon/favicon.ico">
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="西电托儿所" href="/feed.xml" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+</head>
+
+
+<body>
+        <nav class="nav">
+        <ul class="list">
+            
+				    
+				    <li class="item"><a class="link" href="/" >Home</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/blog/" >Blog</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/projects/" >Projects</a></li>
+				
+				    
+				    <li class="item"><a class="link" href="/about/" >About</a></li>
+				
+        </ul>
+    </nav>
+
+    <div class="wrapper">
+        <div class="title">
+            <h1>《算法一》—单向链表</h1>
+            <h4>23 Apr 2015</h4>
+        </div>
+        <div class="article">
+            <section id="table-of-contents" class="toc">
+  <header>
+    <h3><i class="fa fa-book"></i> Contents</h3>
+  </header>
+<div id="drawer">
+<ul id="markdown-toc">
+  <li><a href="#section" id="markdown-toc-section">前言</a></li>
+  <li><a href="#section-1" id="markdown-toc-section-1">单向链表</a>    <ul>
+      <li><a href="#section-2" id="markdown-toc-section-2">链中的一环</a></li>
+      <li><a href="#section-3" id="markdown-toc-section-3">操作</a></li>
+    </ul>
+  </li>
+  <li><a href="#section-4" id="markdown-toc-section-4">总结</a></li>
+  <li><a href="#section-5" id="markdown-toc-section-5">附录（给出完整的定义）</a></li>
+</ul>
+
+  </div>
+</section>
+<!-- /#table-of-contents -->
+
+<p>[10:01 PM]</p>
+
+<h1 id="section">前言</h1>
+
+<blockquote>
+  <p>名言：程序 = 数据结构 + 算法
+所以最近把《程序员的实用算法》好好看</p>
+</blockquote>
+
+<h1 id="section-1">单向链表</h1>
+<p>链表也许是比较简单的数据结构了，因为人的认知东西依靠的是模式，链表能很好的对应生活的中车链这个东东了。</p>
+
+<h2 id="section-2">链中的一环</h2>
+<p>关键是如何表示链表中的一环，经典的定义如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>//节点的定义
+struct Node
+{
+	char *City;
+	int Temp;
+	struct Node *next;
+};
+
+typedef struct Node * Link;
+
+</code></pre>
+</div>
+
+<h2 id="section-3">操作</h2>
+<p>有了数据结构，总要对数据进行操作，下面给出单向链表的一些常规操作。</p>
+
+<p>1、初始化操作</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>void CreateLite()
+{
+	head = NULL;  //头节点
+	iNodeCount = 0; //节点数量
+}
+</code></pre>
+</div>
+<p>2、增加节点
+向一个链表增加一个节点，其实很简单，但是有几种情况要特殊处理：比如空表（说白就是增加第一个节点），最初的时候，都是对其进行特殊处理。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>int AddNodeAscend(Link to_add)
+{
+	Link  pn,
+		  pre,
+		  curr;
+	struct Node dumy;  //生成一个节点 很好的策略！！！！！
+
+	pn = (Link)malloc(sizeof( struct Node));
+	if ( NULL == pn )
+	{
+		return 0;
+	}
+	memcpy( pn , to_add ,sizeof(struct Node));
+
+	dumy.next = head;
+	pre = &amp;dumy;
+	curr = head;
+
+	int i;
+	for (; curr != NULL ; pre = curr, curr = curr-&gt;next)
+	{
+	}
+	pre-&gt;next = pn;
+	pn-&gt;next = curr;
+
+	head = dumy.next;
+	return 1;
+}
+</code></pre>
+</div>
+<p>3、删除节点</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>int DeleNode(Link to_Del)
+{
+	Link curr,
+		 pre;
+	int i;
+
+	if ( NULL == head )
+	{
+		return 0;
+	}
+
+	for ( pre = NULL , curr = head; curr != NULL;pre = curr, curr = curr-&gt;next)
+	{
+		i = NodeCmp(to_Del, curr);
+		if ( curr != NULL &amp;&amp; 0 ==i )
+		{
+			if ( pre)
+			{
+				pre-&gt;next = curr-&gt;next;
+			}
+			else
+			{
+				head = curr-&gt;next;
+			}
+
+			FreeNode(curr);	
+			iNodeCount -= 1;
+			return 1;
+		}
+	}
+	return 0;
+}
+</code></pre>
+</div>
+<p>4、释放内存操作（很关键，不让内存泄露！）</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>void FreeNode(Link to_free)
+{
+	free( to_free-&gt;City );
+	free(to_free);
+}
+</code></pre>
+</div>
+
+<h1 id="section-4">总结</h1>
+<p>单向链表较为简单，很好使用，但是也存在一定的局限性。</p>
+
+<h1 id="section-5">附录（给出完整的定义）</h1>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#ifndef LINK_H
+#define LINK_H
+
+//链表的声明
+struct Node
+{
+	char *City;
+	int Temp;
+	struct Node *next;
+};
+
+typedef struct Node * Link;
+
+int AddNodeAscend(Link to_add); //以降序的形式加入一个节点
+void CreateLite( void ); //初始化一个链表
+int DeleNode( Link to_Del); //删除一个节点
+int DuplicateNode( Link , Link ); //处理多重插入
+void FreeNode(Link to_free); //释放一个节点
+void ShowNode( void ); //形式节点
+int NodeCmp(Link , Link ) ; //比较两个节点
+#endif
+</code></pre>
+</div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>#include "Link.h"
+#include &lt;stdlib.h&gt;
+#include &lt;string&gt;
+Link head;
+int iNodeCount;
+
+int AddNodeAscend(Link to_add)
+{
+	Link  pn,
+		  pre,
+		  curr;
+	struct Node dumy;  //生成一个节点
+
+	pn = (Link)malloc(sizeof( struct Node));
+	if ( NULL == pn )
+	{
+		return 0;
+	}
+	memcpy( pn , to_add ,sizeof(struct Node));
+
+	dumy.next = head;
+	pre = &amp;dumy;
+	curr = head;
+
+	int i;
+	for (; ; pre = curr, curr = curr-&gt;next)
+	{
+		if ( NULL == curr )
+		{
+			break; //到达末尾
+		}
+		i = NodeCmp(pn,curr);
+		if ( i &lt;= 0 )
+		{
+			break;
+		}
+	}
+
+	if ( curr &amp;&amp; 0 == i)
+	{
+		if ( 0 == DuplicateNode(curr ,pn ) )
+		{
+			return 1;
+		}
+	}
+
+	pre-&gt;next = pn;
+	pn-&gt;next = curr;
+
+	head = dumy.next;
+	return 1;
+}
+
+int DuplicateNode( Link inLinst, Link duplicate)
+{
+	FreeNode(duplicate);
+	return 0;
+}
+
+int DeleNode(Link to_Del)
+{
+	Link curr,
+		 pre;
+	int i;
+
+	if ( NULL == head )
+	{
+		return 0;
+	}
+
+	//curr = head; 
+	//i = NodeCmp(to_Del,curr);
+
+	for ( pre = NULL , curr = head; curr != NULL;pre = curr, curr = curr-&gt;next)
+	{
+		i = NodeCmp(to_Del, curr);
+		if ( curr != NULL &amp;&amp; 0 ==i )
+		{
+			if ( pre)
+			{
+				pre-&gt;next = curr-&gt;next;
+			}
+			else
+			{
+				head = curr-&gt;next;
+			}
+
+			FreeNode(curr);	
+			iNodeCount -= 1;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int NodeCmp(Link a, Link b)
+{
+	if ( a-&gt;Temp != b-&gt;Temp )
+	{
+		return a-&gt;Temp - b-&gt;Temp;
+	}
+	else
+	{
+		return strcmp(a-&gt;City ,b-&gt;City);
+	}
+}
+
+void CreateLite()
+{
+	head = NULL;
+	iNodeCount = 0;
+}
+
+void FreeNode(Link to_free)
+{
+	free( to_free-&gt;City );
+	free(to_free);
+}
+
+void ShowNode()
+{
+	Link pn;
+	int count, median;
+	
+	for ( count = 0 ,pn = head;pn;pn = pn-&gt;next)
+	{
+		count +=1;
+	}
+
+	median = count/2+1;
+
+	if ( count)
+	{
+		count = 0;
+		for ( pn = head; pn;pn = pn-&gt;next)
+		{
+			printf("%-20s: %3d",pn-&gt;City,pn-&gt;Temp);
+			count += 1;
+			if ( count == median )
+			{
+				printf("----Median-----");
+			}
+			printf("\n");
+		}
+
+	}
+	else
+	{
+		printf("Empty list\n");
+	}
+}
+</code></pre>
+</div>
+
+        </div>
+    </div>
+        <div class="footer">
+        西电托儿所 © 2016 <a href="/feed.xml" target="_blank"><i class="fa fa-fw fa-feed"></i></a>
+    </div>
+
+    <script src="/assets/js/jquery-1.12.2.min.js"></script>
+<script src="/assets/js/jquery.goup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $.goup({
+        trigger: 500,
+        bottomOffset: 10,
+        locationOffset: 20,
+        containerRadius: 0,
+        containerColor: '#fff',
+        arrowColor: '#000',
+        goupSpeed: 'normal'
+    });
+});
+</script>
+
+
+</body>
+</html>

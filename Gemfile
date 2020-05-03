@@ -1,5 +1,9 @@
-source 'https://rubygems.org'
+source 'http://rubygems.org'
+
+gem 'github-pages'
+gem 'rouge'
 gem 'jekyll'
-gem 'redcarpet'
-gem 'jekyll-paginate'
+gem 'jekyll-mentions'
+gem 'jekyll-feed'
 gem 'jekyll-sitemap'
+gem 'jekyll-gist'
