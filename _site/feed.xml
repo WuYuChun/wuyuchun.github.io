@@ -5,1689 +5,1782 @@
     <description>欢迎来到我的个人站~</description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 04 May 2020 02:48:18 +0800</pubDate>
-    <lastBuildDate>Mon, 04 May 2020 02:48:18 +0800</lastBuildDate>
+    <pubDate>Sat, 23 May 2020 14:30:14 +0800</pubDate>
+    <lastBuildDate>Sat, 23 May 2020 14:30:14 +0800</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
-        <title>cuda的认识</title>
-        <description>&lt;p&gt;[12:51 ]&lt;/p&gt;
+        <title>Profiler_cuda</title>
+        <description>
+&lt;hr /&gt;
+&lt;p&gt;layout: post&lt;/p&gt;
+
+&lt;p&gt;title:  “profiler_cuda”&lt;/p&gt;
+
+&lt;p&gt;date:   2020-05-16 14:29&lt;/p&gt;
+
+&lt;p&gt;excerpt:&lt;/p&gt;
+
+&lt;p&gt;tag:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;h2 id=&quot;gpu&quot;&gt;GPU&lt;/h2&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;[TOC]&lt;/p&gt;
 
 &lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
 
-&lt;p&gt;传统单线程的例子&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
- * 简介：用于计算一个数组中元素的和
- * 注意：这是普通的写法
- */
+&lt;p&gt;主要用于针对于cuda函数进行性能测量&lt;/p&gt;
 
-#include &amp;lt;iostream&amp;gt;
-#include &amp;lt;vector&amp;gt;
+&lt;p&gt;本文档介绍了NVIDIA的剖析工具，使您能够了解并优化您的CUDA、OpenACC或OpenMP应用程序的性能。Visual Profiler是一个图形化的剖析工具，它可以显示应用程序的CPU和GPU活动的时间轴，其中包括一个自动分析引擎，可识别出优化机会。nvprof profiling工具可以让你从命令行收集和查看分析数据。&lt;/p&gt;
 
-int main(int argc, char *argv[]){
+&lt;p&gt;建议使用下一代工具NVIDIA Nsight Compute进行GPU分析，以及NVIDIA Nsight Systems进行GPU和CPU采样和追踪。&lt;/p&gt;
 
-    const int N = 50000;
+&lt;p&gt;NVIDIA Nsight Compute是一款针对CUDA应用程序的交互式内核分析器。它通过一个用户界面和命令行工具提供详细的性能指标和API调试。此外，其基线功能允许用户在工具内比较结果。Nsight Compute提供了一个可定制的、数据驱动的用户界面和&lt;strong&gt;指标收集&lt;/strong&gt;，并可通过&lt;strong&gt;分析脚本&lt;/strong&gt;进行后处理结果的扩展。&lt;/p&gt;
 
-    //!任务1 创建数组
-    std::vector&amp;lt;int&amp;gt; a(N);
+&lt;p&gt;NVIDIA Nsight Systems是一款全系统的性能分析工具，其设计目的是将应用的算法可视化，帮助您识别出最大的优化机会，并在任何数量或大小的CPU和GPU上进行有效的调整，从大型服务器到最小的SoC。&lt;/p&gt;
 
-    //!任务2 填充数组
-    for(int i = 0; i &amp;lt; N; ++i){
-        a[i] = i;
-    }
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;这两者的区别是什么呢？&lt;/li&gt;
+&lt;/ul&gt;
 
-    //!任务3：计算数组中里面的所有的和
-    int sum_A(0);
-    for(int i = 0; i &amp;lt; N; ++i){
-        sum_A += a[i];
-    }
+&lt;h1 id=&quot;术语&quot;&gt;术语&lt;/h1&gt;
 
-    //!任务4：计算0到N-1之和
-    int sum_check(0);
-    for(int i = 0; i &amp;lt; N; ++i){
-        sum_check += i;
-    }
+&lt;p&gt;event是指设备上的&lt;strong&gt;可计数&lt;/strong&gt;的活动、动作以及发生。它对应于内核执行过程中收集的单个硬件&lt;strong&gt;计数器值&lt;/strong&gt;。要查看特定NVIDIA GPU上所有可用事件的列表，请键入 nvprof –query-events。&lt;/p&gt;
 
-    //!检查任务的正确性
-    if(sum_A == sum_check){
-        std::cout &amp;lt;&amp;lt; &quot;all right!&quot; &amp;lt;&amp;lt; std::endl;
-    }
-    else{
-        std::cout &amp;lt;&amp;lt; &quot;it's wrong!&quot; &amp;lt;&amp;lt;std::endl;
-    }
+&lt;p&gt;metric是一个应用程序的特性，它是&lt;strong&gt;由一个或多个事件值计算&lt;/strong&gt;出来的。要查看一个特定的NVIDIA GPU上所有可用的指标列表，请键入 nvprof –query-metrics。你也可以参考度量指标参考。&lt;/p&gt;
 
-    return 0;
-} 
+&lt;h1 id=&quot;性能报告分析&quot;&gt;性能报告分析&lt;/h1&gt;
+
+&lt;h2 id=&quot;聚焦特定的部分上&quot;&gt;聚焦特定的部分上&lt;/h2&gt;
+
+&lt;p&gt;默认情况下，剖析工具会在整个应用程序的运行过程中收集配置文件数据。但是，正如下面所解释的，通常只想对应用程序中包含部分或全部性能关键代码的区域进行剖析。将剖面分析限制在性能关键区域，可以减少工具必须处理的剖面数据量，并将注意力集中在优化能带来最大性能提升的代码上。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;当应用程序的每个阶段的性能都可以独立于其他阶段进行优化时，你要对每个阶段分别进行剖析，以便集中优化工作。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;n&quot;&gt;cudaProfilerStart&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+ &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+ &lt;span class=&quot;n&quot;&gt;cudaProfilerStop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;这个是用cuda编写的例子— &lt;strong&gt;这里使用的是C++ThrustAPI&lt;/strong&gt;&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
- * 简介：这个是用cuda的Thrust数据并行API的例子
- */
+&lt;p&gt;&lt;strong&gt;注意事项:&lt;/strong&gt;&lt;/p&gt;
 
+&lt;blockquote&gt;
+  &lt;p&gt;When using the start and stop functions, you also need to instruct the profiling tool to disable profiling at the start of the application. For nvprof you do this with the –profile-from-start off flag. For the Visual Profiler you use the Start execution with profiling enabled checkbox in the Settings View.&lt;/p&gt;
+&lt;/blockquote&gt;
 
-#include &amp;lt;iostream&amp;gt;
-using namespace std;
+&lt;h2 id=&quot;标记cpu的活动&quot;&gt;标记CPU的活动&lt;/h2&gt;
 
-#include &amp;lt;thrust/reduce.h&amp;gt;
-#include &amp;lt;thrust/sequence.h&amp;gt;
-#include &amp;lt;thrust/host_vector.h&amp;gt;
-#include &amp;lt;thrust/device_vector.h&amp;gt;
+&lt;p&gt;要了解应用程序的CPU线程在CUDA函数调用之外的工作，可以使用NVIDIA Tools Extension API (NVTX)。&lt;/p&gt;
 
-int main(int argc, char *argv[]) {
+&lt;h2 id=&quot;刷新profile-data&quot;&gt;刷新Profile Data&lt;/h2&gt;
 
-    const int N = 50000;
+&lt;p&gt;为了减少剖析开销，剖析工具收集和记录剖析信息到内部缓冲区。然后这些缓冲区被异步冲洗到磁盘上，并以低速 优先级，以避免扰乱应用行为。为了避免丢失配置文件信息 还没有被冲洗，被剖析的应用程序应确保在 退出，所有的GPU工作都已完成（使用CUDA同步调用），然后 调用 cudaProfilerStop() 或 cuProfilerStop()。这样做会迫使缓冲profile 相应的上下文信息。&lt;/p&gt;
 
-    //!创建数组
-    thrust::device_vector&amp;lt;int&amp;gt; a(N);
+&lt;p&gt;注意：要是没有调用stop的函数，会导致丢失大量profile 数据。&lt;/p&gt;
 
-    //！填充数组 并行
-    thrust::sequence(a.begin(),a.end(),0);
+&lt;p&gt;&lt;strong&gt;还有另一种办法：使用 nvprof 选项 –timeout 或在 Visual Profiler 中设置 “Execution timeout”。分析器将在超时前强制进行数据刷新。&lt;/strong&gt;&lt;/p&gt;
 
-    //！并行计算数组元素之和
-    int sumA = thrust::reduce(a.begin(),a.end(),0);
+&lt;h1 id=&quot;visual-profiler的使用&quot;&gt;Visual Profiler的使用&lt;/h1&gt;
 
-    //！测试是否异步的
-    std::cout &amp;lt;&amp;lt; &quot;已经调用～～～&quot; &amp;lt;&amp;lt; std::endl;
+&lt;p&gt;NVIDIA Visual Profiler 可让您将应用程序的性能可视化并进行优化。&lt;/p&gt;
 
+&lt;p&gt;Visual Profiler 的独立版本，即 &lt;strong&gt;nvvp&lt;/strong&gt;，包含在所有支持的操作系统的 CUDA 工具包中。&lt;/p&gt;
 
-    int sum_check(0);
+&lt;h2 id=&quot;session&quot;&gt;session&lt;/h2&gt;
 
-    //!这里主要测试 异步调用
-    #if 0
-    for(int i = 0; i &amp;lt; N; ++i){
-        sum_check += i;
-    }
-    #endif
-    std::cout &amp;lt;&amp;lt; &quot;sum_A: &quot; &amp;lt;&amp;lt;sum_A &amp;lt;&amp;lt;std::endl;
+&lt;p&gt;会话包含与您的应用程序关联的设置，数据和结果。&lt;/p&gt;
 
-    if(sum_check == sumA) {
-        std::cout &amp;lt;&amp;lt;&quot;test good!&quot; &amp;lt;&amp;lt; std::endl;
-    }
-    else {
-        std::cout &amp;lt;&amp;lt;&quot;test err!&quot; &amp;lt;&amp;lt;std::endl;
-    }
+&lt;p&gt;session文件有两种：&lt;/p&gt;
 
-    return 0;
-} 
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h1 id=&quot;cuda-api&quot;&gt;cuda API&lt;/h1&gt;
-&lt;p&gt;cuda提供了多种API，如下所示（从高层到底层）：&lt;/p&gt;
 &lt;ol&gt;
-  &lt;li&gt;数据并行 C++ Thrust API&lt;/li&gt;
-  &lt;li&gt;可用于C或者C++的Runtime API&lt;/li&gt;
-  &lt;li&gt;可用于C或者C++的Driver API&lt;/li&gt;
+  &lt;li&gt;直接用visual Profiler生成的&lt;/li&gt;
+  &lt;li&gt;直接用nvprof来生成&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h2 id=&quot;关键点&quot;&gt;关键点&lt;/h2&gt;
-&lt;p&gt;1.用于CUDA的GPU是安装于主机系统中的独立设备。&lt;/p&gt;
+&lt;h3 id=&quot;timeline-view时间轴&quot;&gt;timeline view(时间轴)&lt;/h3&gt;
 
-&lt;p&gt;2.GPU运行在一个和主处理器相隔离的存储空间中。&lt;/p&gt;
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;如何使用时间轴&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;3.CUDA kernel是可在主机代码中调用而在CUDA设备上运行的子程序 &lt;strong&gt;通过__global__来定义&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3 id=&quot;分析窗口&quot;&gt;分析窗口&lt;/h3&gt;
 
-&lt;p&gt;4.kernel的调用是异步的，即主机仅仅把要执行的kernel顺序提交给GPU，并不等待其执行完成，然后在直接处理后面其他的任务。&lt;/p&gt;
+&lt;p&gt;分析视图用于控制应用程序分析并显示分析结果。 有两种分析模式：引导模式和非引导模式。 在引导模式下进行分析系统将指导您完成多个分析阶段，以帮助您了解应用程序中可能存在的性能限制因素和优化机会。 在非引导模式下，您可以手动浏览为您收集的所有分析结果应用。&lt;/p&gt;
 
-&lt;p&gt;5.GPU上的基本运行单位是线程&lt;/p&gt;
-</description>
-        <pubDate>Mon, 02 Jan 2017 12:51:00 +0800</pubDate>
-        <link>http://localhost:4000/2017/01/Cuad%E7%9A%84%E8%AE%A4%E8%AF%86/</link>
-        <guid isPermaLink="true">http://localhost:4000/2017/01/Cuad%E7%9A%84%E8%AE%A4%E8%AF%86/</guid>
-        
-        <category>cuda</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>C11中的chrono的使用</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
+&lt;h3 id=&quot;pc采样窗口&quot;&gt;PC采样窗口&lt;/h3&gt;
 
-&lt;p&gt;[12:18 ]&lt;/p&gt;
+&lt;h3 id=&quot;内存分析&quot;&gt;内存分析&lt;/h3&gt;
 
-&lt;p&gt;[C++ 11增加了三个与时间相关的类型：时间段、时钟、时间点。]&lt;/p&gt;
-&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
+&lt;p&gt;绿色节点表示逻辑存储空间，而蓝色表示芯片的实际硬件单元&lt;/p&gt;
 
-&lt;p&gt;现有的系统API中，时间太过于碎片化了。有time_t(秒)、struct timeval(微秒)、struct timespec(纳秒)这几个时间单位，他们的接口非常不统一，点击这里可以体会一下。主要原因：是由于新业务的需求，
-要求提供不同精度的时间。于是每次出现新需求就定义一个新类型。为此，C++11提出一个”一统江湖”的做法，避免这类现象的发生。 时间精度其实也就是时间分辨率。抛开时间量纲单论分辨率
-，其实就是一个比率。如：10001、101、11 、110、11000。这些比率加上距离量纲就变成距离分辨率，加上时间量纲就变成时间分辨率了。为此，C++11定义了一个新的模板类ratio，用于表示比率，定义如下：&lt;/p&gt;
+&lt;h3 id=&quot;源码和汇编的分析&quot;&gt;源码和汇编的分析&lt;/h3&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;ration&amp;gt;
-template&amp;lt;std::intmax_t Num, std::intmax_t Denom = 1&amp;gt; //前者是分子，后者是分母 后者表示 1秒
-class ratio;
+&lt;p&gt;注意：To be able to view the kernel source you need to compile the code using the **-lineinfo **option.&lt;/p&gt;
 
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;为了方便，C++标准委员会还预定义了下面这些分辨率，供用户使用。&lt;/p&gt;
+&lt;h3 id=&quot;gpu详细窗口&quot;&gt;GPU详细窗口&lt;/h3&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;ratio&amp;gt;
-typedef ratio&amp;lt;1,       1000000000000000000&amp;gt; atto;
-typedef ratio&amp;lt;1,          1000000000000000&amp;gt; femto;
-typedef ratio&amp;lt;1,             1000000000000&amp;gt; pico;
-typedef ratio&amp;lt;1,                1000000000&amp;gt; nano;
-typedef ratio&amp;lt;1,                   1000000&amp;gt; micro;
-typedef ratio&amp;lt;1,                      1000&amp;gt; milli;
-typedef ratio&amp;lt;1,                       100&amp;gt; centi;
-typedef ratio&amp;lt;1,                        10&amp;gt; deci;
-typedef ratio&amp;lt;                       10, 1&amp;gt; deca;
-typedef ratio&amp;lt;                      100, 1&amp;gt; hecto;
-typedef ratio&amp;lt;                     1000, 1&amp;gt; kilo;
-typedef ratio&amp;lt;                  1000000, 1&amp;gt; mega;
-typedef ratio&amp;lt;               1000000000, 1&amp;gt; giga;
-typedef ratio&amp;lt;            1000000000000, 1&amp;gt; tera;
-typedef ratio&amp;lt;         1000000000000000, 1&amp;gt; peta;
-typedef ratio&amp;lt;      1000000000000000000, 1&amp;gt; exa;
+&lt;h3 id=&quot;cpu窗口&quot;&gt;CPU窗口&lt;/h3&gt;
+
+&lt;h1 id=&quot;nvprof的使用&quot;&gt;nvprof的使用&lt;/h1&gt;
+
+&lt;p&gt;使用nvprof分析工具，您可以从命令行收集和查看分析数据。 nvprof支持在CPU和GPU上收集与CUDA相关的活动的时间表，包括&lt;strong&gt;内核执行，内存传输，内存集和CUDA API调用以及CUDA内核&lt;/strong&gt;的事件或指标。 提供了分析选项，通过命令行选项访问nvprof。 收集分析数据后，分析结果将显示在控制台中，也可以保存以供以后由nvprof或Visual Profiler查看。&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Usage: nvprof &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;options] &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;application] &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;application-arguments]
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;h1 id=&quot;时间断&quot;&gt;时间断&lt;/h1&gt;
+&lt;h2 id=&quot;profile模式&quot;&gt;profile模式&lt;/h2&gt;
 
-&lt;p&gt;30分钟，0.5秒都表示一段时间。由此可以得到：一段时间是由”数值+时间单位”组成的。反映在编程上就是要存储两个变量。显然，数值有整数和小数两种，
-究竟是使用整数(int)还是小数(double)应该由用户指定。无疑，用模板表示之是非常合适的。结合前面提到的时间精度，不难得出一段时间应该定义为如下形式：&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;chrono&amp;gt;
-template&amp;lt;class Rep, class Period = std::ratio&amp;lt;1&amp;gt; &amp;gt; 
-class duration;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;于是，30秒就有下面几种表示方式：&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-std::chrono::duration&amp;lt;int, std::ratio&amp;lt;1,1&amp;gt;&amp;gt; a(30);//30秒
-std::chrono::duration&amp;lt;int&amp;gt; b(30);//30秒
-std::chrono::duration&amp;lt;int, std::ratio&amp;lt;1, 1000&amp;gt;&amp;gt; c(30000);//30 000毫秒
-std::chrono::duration&amp;lt;double, std::ratio&amp;lt;60,1&amp;gt;&amp;gt; d(0.5);//半分钟
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;同样，C++标准委员会预定义了下面这些类型，供我们直接使用。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;std::chrono::nanoseconds    duration&amp;lt;/*signed integer type of at least 64 bits*/, std::nano&amp;gt;
-std::chrono::microseconds   duration&amp;lt;/*signed integer type of at least 55 bits*/, std::micro&amp;gt;
-std::chrono::milliseconds   duration&amp;lt;/*signed integer type of at least 45 bits*/, std::milli&amp;gt;
-std::chrono::seconds    duration&amp;lt;/*signed integer type of at least 35 bits*/&amp;gt;
-std::chrono::minutes    duration&amp;lt;/*signed integer type of at least 29 bits*/, std::ratio&amp;lt;60&amp;gt;&amp;gt;
-std::chrono::hours  duration&amp;lt;/*signed integer type of at least 23 bits*/, std::ratio&amp;lt;3600&amp;gt;&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;又是讨厌的implementation-defined，gcc4.9.0的一个实现为：&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;typedef duration&amp;lt;int64_t, nano&amp;gt;         nanoseconds;
-typedef duration&amp;lt;int64_t, micro&amp;gt;        microseconds;
-typedef duration&amp;lt;int64_t, milli&amp;gt;        milliseconds;
-typedef duration&amp;lt;int64_t&amp;gt;           seconds;
-typedef duration&amp;lt;int64_t, ratio&amp;lt; 60&amp;gt;&amp;gt;   minutes;
-typedef duration&amp;lt;int64_t, ratio&amp;lt;3600&amp;gt;&amp;gt;  hours;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;当定义了一个时间段后，如何从中得知该时间段类型的rep和period模板参数的类型呢？其实，当我们用具体的类型实例化duration模板类后，
-实例化的类就会有rep和period这两个成员类型。于是，可以借助C++11中的关键字decltype以及直接从定义中获取。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-typedef std::chrono::duration&amp;lt;int, std::ratio&amp;lt;60&amp;gt;&amp;gt; Minus;
-Minus::rep a = 30; //a是int类型
-Minus::period per;//per的类型是 std::ration&amp;lt;60, 1&amp;gt;。即per.num 为60， per.den 为1
+&lt;h3 id=&quot;概要模式&quot;&gt;概要模式&lt;/h3&gt;
 
-Minus twenty_seconds(20);
-decltype(twenty_seconds.count()) b = 30;//后面会介绍count()的返回值类型, b的类型为int
-decltype(twenty_seconds)::rep e = 40;//e的类型为int
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;duration模板类提供了一个成员函数count()用户获取该时间段的值，这个值也称为滴答数。它的返回值类型就是实例化后成员类型rep。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-std::chrono::seconds twenty_sec(20);
-int c = twenty_sec.count();//c等于20
-std::chrono::duration&amp;lt;double&amp;gt; half_sec(0.5);
-double d = half_sec.count();//d等于0.5
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;摘要模式是nvprof的默认操作模式。 在此模式下，nvprof输出每个内核功能和每种CUDA内存复制/类型的单个结果行设置由应用程序执行。 对于每个内核，nvprof输出的总时间为内核或内存副本类型的所有实例以及平均值，最小值，和最长的时间。 内核时间是设备上内核执行时间。默认情况下，nvprof还会打印所有CUDA运行时/驱动程序API调用的摘要。&lt;/p&gt;
 
-&lt;h1 id=&quot;时钟&quot;&gt;时钟&lt;/h1&gt;
+&lt;h3 id=&quot;gpu-跟踪和api模式&quot;&gt;GPU-跟踪和API模式&lt;/h3&gt;
 
-&lt;p&gt;时钟有电子表、怀表、秒表、原子钟等。这些时钟的时间精度有所不同。此外，对于电子表的时间是无法取小数的，而怀表则可以人为地取小数。
-这说明不同的时钟也会有前面时间段类型duration的rep和period这两个属性。并且也是以成员类型的形式出现。但时钟类本身不是模板类。 
-C++11为我们提供了三种时钟类型：system_clock、steady_clock、high_resolution_clock。 这三个时间类都提供了rep、period、duration成员类型。
-因为各个系统能提供的时间精度可能不同，所以period的真正类型是implementation-defined的。这三个时钟类都提供了一个静态成员函数now()用于获取当前时间，该函数的返回值是一个time_point类型，后面会介绍。 
-&lt;strong&gt;注意：，虽然这三个时钟都很多相同的成员类型和成员函数，但它们是没有亲缘关系的。这三个时钟类型都是类，并非模板类。&lt;/strong&gt;
-这三个时钟有什么区别呢？system_clock就类似Windows系统右下角那个时钟，是系统时间。明显那个时钟是可以乱设置的。明明是早上10点，
-却可以设置成下午3点。steady_clock则针对system_clock可以随意设置这个缺陷而提出来的，他表示时钟是不能设置的。想了解更多，可以点击这里。high_resolution_clock则是一个高分辨率时钟。 
-system_clock除了now()函数外，还提供了to_time_t()静态成员函数。用于将系统时间转换成熟悉的std::time_t类型，得到了std::time_t类型的值，就可以很方便地打印当前时间了。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-auto tp = std::chrono::system_clock::now();
-std::time_t cur_time = std::chrono::system_clock::to_time_t(tp);
-std::string str_time = std::ctime(&amp;amp;cur_time);
-std::cout&amp;lt;&amp;lt;str_time&amp;lt;&amp;lt;std::endl;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;注意：不要将steady_clock、high_resolution_clock时钟的now()返回值作为to_time_t的参数，这会导致编译通不过。因为类型不匹配，后面会详解。 
-其实，如果读者有把刚才那个链接点开，并去了解的steady_clock的话，不用了解now()返回值类型就能知道这样做肯定是不行的了。
-steady_clock的实现是使用monotonic时间，而monotonic时间一般是从boot启动后开始计数的。明显这不能获取日历时间(年月日时分秒)。
-那么steady_clock有什么用途呢？时间比较！并且是不受用户调整系统时钟影响的时间比较。简单的例子如下：&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-auto begin = std::chrono::steady_clock::now();
-for(int i = 0; i &amp;lt; 10000000; ++i)
-{
-    //复杂的数学运算
-}
-auto end = std::chrono::steady_clock::now();
-auto diff = (end - begin).count();//end-begin得到一个duration类型
-std::cout&amp;lt;&amp;lt;diff&amp;lt;&amp;lt;std::endl;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;即使在做数学运算的时候，有人修改了系统时间，也能准确计算出for循环消耗的时间。&lt;/p&gt;
+&lt;p&gt;可以单独或一起启用GPU-Trace和API-Trace模式。 GPU跟踪模式提供了按时间顺序显示GPU上发生的所有活动的时间表。 输出中显示了每个内核执行和内存复制/设置实例。 对于每个内核或内存副本，将显示详细信息，例如内核参数，共享内存使用率和内存传输吞吐量。 内核名称后方括号中显示的数字与启动该内核的CUDA API相关。&lt;strong&gt;–print-gpu-trace&lt;/strong&gt;&lt;/p&gt;
 
-&lt;h1 id=&quot;时间点&quot;&gt;时间点&lt;/h1&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nvprof &lt;span class=&quot;nt&quot;&gt;--print-gpu-trace&lt;/span&gt; ./vectorAdd
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;Vector addition of 50000 elements]
+&lt;span class=&quot;o&quot;&gt;==&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;7522&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; NVPROF is profiling process 7522, &lt;span class=&quot;nb&quot;&gt;command&lt;/span&gt;: ./vectorAdd
+Copy input data from the host memory to the CUDA device
+CUDA kernel launch with 196 blocks of 256 threads
+Copy output data from the CUDA device to the host memory
+Test PASSED
+Done
+&lt;span class=&quot;o&quot;&gt;==&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;7522&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; Profiling application: ./vectorAdd
+&lt;span class=&quot;o&quot;&gt;==&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;7522&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; Profiling result:
+   Start  Duration            Grid Size      Block Size     Regs&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;    SSMem&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;    DSMem&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;      Size  Throughput  SrcMemType  DstMemType           Device   Context    Stream  Name
+330.01ms  16.992us                    -               -         -         -         -  195.31KB  10.962GB/s    Pageable      Device  GeForce GTX 108         1         7  &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;CUDA memcpy HtoD]
+330.05ms  16.416us                    -               -         -         -         -  195.31KB  11.347GB/s    Pageable      Device  GeForce GTX 108         1         7  &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;CUDA memcpy HtoD]
+330.08ms  2.7520us            &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;196 1 1&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;256 1 1&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;         8        0B        0B         -           -           -           -  GeForce GTX 108         1         7  vectorAdd&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;float const &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;, float const &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;, float&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;, int&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;111]
+330.09ms  16.128us                    -               -         -         -         -  195.31KB  11.549GB/s      Device    Pageable  GeForce GTX 108         1         7  &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;CUDA memcpy DtoH]
 
-&lt;p&gt;前面已经指出：时钟类的now()函数的返回值是一个time_point类(型)。不言而喻，时间点(time_point)必然是时钟相关的。
-从怀表读取到的时间(点)只有小时、分钟、秒，手机则能提供日期+时分秒。此外，不同时钟提供的时间精度也有所不同。所以，
-时间点(time_point)类至少得有时钟类型、时间精度这两个属性。同前面介绍的时间段模板类一样，这两个属性也是以模板参数的形式出现。time_point的定义如下：&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//#include&amp;lt;chrono&amp;gt;
-template&amp;lt; class Clock, class Duration = typename Clock::duration &amp;gt; 
-class time_point;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;时间精度是duration类，默认的时钟模板参数提供的duration。时钟模板参数除了前面介绍的那三个时钟(这是C++默认提供的)外，还可以是码农自己定义的时钟类。 
-同前面的时间段类和时钟类一样，时间点类也提供了rep、period、duration、clock这几个成员类型。
-前面已经指出，各个时钟能提供的时间精度是implementation-defined的。所以应该如下面代码那样获取时钟的now()函数返回值。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;auto tp = std::chrono::system_clock::now();
-std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;下面代码是不正确的，不具有可移植性。例子来自stackoverflow。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;std::chrono::time_point&amp;lt;std::chrono::system_clock,std::chrono::nanoseconds&amp;gt; time_point;
-time_point = std::chrono::system_clock::now();
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;除了从时钟类的now函数中获取一个time_point，还可以直接构造一个time_point对象。time_point模板类的构造函数有无参的、
-用duration作为参数这两个构造函数。对此，我感到很奇怪：直接构造出来的time_point有什么含义呢？
-time_point有一个time_since_epoch()成员函数，返回从epoch时间到此刻的时间段。epoch时间是时钟的开启时间。
-对于system_clock和high_resolution_clock来说，epoch是1970-01-01T00:00:00。熟悉C语言time()函数的读者对此应该不陌生。
-steady_clock时钟则是boot启动时间，所以不应该对steady_clock::now()返回的time_point调用time_since_epoch()。下面是霸王强上弓使用，打印出来的时间是1970年的。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-auto tp = std::chrono::steady_clock::now();
-std::time_t cur_time = std::chrono::duration_cast&amp;lt;std::chrono::seconds&amp;gt;(tp.time_since_epoch()).count();
-std::string str_time = std::ctime(&amp;amp;cur_time);
-cout&amp;lt;&amp;lt;str_time&amp;lt;&amp;lt;endl;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;如果time_point不是从时钟类的now()返回值得来的，而是直接构造出来的话，那么它调用time_since_epoch()的返回值就等同于构造函数中的duration参数。&lt;/p&gt;
-
-&lt;h1 id=&quot;运算&quot;&gt;运算&lt;/h1&gt;
-
-&lt;p&gt;一段时间的加减乘除无疑是合理的，当然关系比较也是合理的。C++标准委员会还把取模运算也变成合法的了，不仅仅模一个数值合法，模duration类也是合法的。于是有下面这些运算： 
-duration运算
-—
-       具体的使用例子就不写了，读者可以参考en.cppreference.com 
-       上面的运算都是二元运算，如果参与运算的两个duration具有相同的模板参数，那直接运行即可。如果不同，那么将发生隐式转换：int-&amp;gt;double; 低分辨率-&amp;gt;高分辨率。比如：
-—&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-std::chrono::duration&amp;lt;int&amp;gt; two(2);
-std::chrono::duration&amp;lt;double, std::ratio&amp;lt;60&amp;gt;&amp;gt; thirty(0.5);
-
-auto ad = two + thirty;
-cout&amp;lt;&amp;lt;sizeof(decltype(ad)::rep)&amp;lt;&amp;lt;endl;//8
-cout&amp;lt;&amp;lt;ad.count()&amp;lt;&amp;lt;&quot;\t&quot;&amp;lt;&amp;lt;decltype(ad)::period::num&amp;lt;&amp;lt;&quot;/&quot;&amp;lt;&amp;lt;decltype(ad)::period::den&amp;lt;&amp;lt;endl;//32  1/1
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;如果参与运算的两个duration具有不同的模板参数，那么能不能进行+=和-=这里运算呢？
-a+=b等同于a=a+b。a+b肯定是可以的，现在问题转换为a=c是否可行？从低精度(包含Rep和Period)到高精度的隐式转换是可行的，反之则是不可以的。因为这将导致截断，丢失部分信息。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-std::chrono::minutes a(30);
-std::chrono::seconds b = a;//OK
-std::chrono::minutes c = b;//compile error
-
-std::chrono::duration&amp;lt;double, std::ratio&amp;lt;60&amp;gt;&amp;gt; d(3);
-std::chrono::seconds e = d;//compile error
-std::chrono::duration&amp;lt;double&amp;gt; f = d;//OK
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;如果确实需要进行转换的话，那么需要使用duration_cast进行显式转换。&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//Author: luotuo44   http://blog.csdn.net/luotuo44
-std::chrono::seconds a(30);
-std::chrono::minutes b = std::chrono::duration_cast&amp;lt;std::chrono::minutes&amp;gt;(a);
-cout&amp;lt;&amp;lt;b.count()&amp;lt;&amp;lt;endl;//结果是0
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//下面是system_clock时钟类to_time_t函数的gcc实现
-static std::time_t to_time_t(const time_point&amp;amp; __t) noexcept
-{
-    return std::time_t(duration_cast&amp;lt;chrono::seconds&amp;gt; (__t.time_since_epoch()).count());
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;hr /&gt;
-
-&lt;p&gt;time_point类也有一些运算，如下图： 
-time_point运算&lt;/p&gt;
-
-&lt;p&gt;gcc4.9.0实现time_point模板类时，time_point内部有一个duration类型的成员变量。
-所以对于tp+=d和dp-=d的实现，都是直接对内部的成员变量直接调用+=，-=。所以调用者必须保证精度的正确性，否则编译出错。&lt;/p&gt;
-
-&lt;hr /&gt;
-</description>
-        <pubDate>Sun, 04 Dec 2016 12:18:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/12/C11%E7%9A%84chrono%E7%9A%84%E4%BD%BF%E7%94%A8/</guid>
-        
-        <category>c++</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>ifstream和eof的使用</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
-
-&lt;p&gt;[15:40 ]&lt;/p&gt;
-
-&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
-&lt;p&gt;最近有一测试，需要分别读取不同的图片以及相关的配置信息，以便测试程序功能是否能达到所期望的要求。想这样的需求，为了方便
-就是想到了以文件的形式进行读取。&lt;/p&gt;
-
-&lt;h1 id=&quot;动手&quot;&gt;动手&lt;/h1&gt;
-&lt;p&gt;开始编码，写完代码如下：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;// 存储图片相关的信息
-struct IMGINFO {
-    int count_;
-    std::string img_file_name_;
-    std::string pmap_;
-};
-
-
-// 读取文件
-int read_file(const std::string filename, std::vector&amp;lt;IMGINFO&amp;gt; &amp;amp;result) {
-
-    if (filename.empty()) {
-        std::cout &amp;lt;&amp;lt; &quot;filename is NULL&quot; &amp;lt;&amp;lt; std::endl;
-        return -1;
-    }
-    result.clear();
-
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cout &amp;lt;&amp;lt; &quot;open file err!&quot; &amp;lt;&amp;lt; std::endl;
-        return -2;
-    }
-
-    // ！读取文件
-    IMGINFO imginfo;
-    while (!file.eof()) {
-        file &amp;gt;&amp;gt; imginfo.img_file_name_;
-        file &amp;gt;&amp;gt; imginfo.count_;
-        file &amp;gt;&amp;gt; imginfo.pmap_;
-        result.push_back(imginfo);
-    }
-    file.close();
-    return 0;
-}
+Regs: Number of registers used per CUDA thread. This number includes registers used internally by the CUDA driver and/or tools and can be more than what the compiler shows.
+SSMem: Static shared memory allocated per CUDA block.
+DSMem: Dynamic shared memory allocated per CUDA block.
+SrcMemType: The &lt;span class=&quot;nb&quot;&gt;type &lt;/span&gt;of &lt;span class=&quot;nb&quot;&gt;source &lt;/span&gt;memory accessed by memory operation/copy
+DstMemType: The &lt;span class=&quot;nb&quot;&gt;type &lt;/span&gt;of destination memory accessed by memory operation/copy
 
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;而文本文件的信息如下：&lt;/p&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;img_0001.jpg
-12
-(12,12),(13,13)(14,14)
-img_0002.jpg
-13
-(12,12),(13,13)(14,14)
-img_0003.jpg
-14
-(12,12),(13,13)(14,14)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;&lt;strong&gt;问题来了，最后输出的结果含有几个数据？&lt;/strong&gt;：这样会多一个数据，因为用eof判断文件是否结尾是有问题的&lt;/p&gt;
+&lt;h3 id=&quot;事件和metric模式&quot;&gt;事件和metric模式&lt;/h3&gt;
 
-&lt;h1 id=&quot;解决&quot;&gt;解决&lt;/h1&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;nvprof is able to collect multiple events/metrics at the same time.&lt;/p&gt;
+&lt;/blockquote&gt;
 
-&lt;p&gt;在使用eof判断文件是否结尾的时候，当发现已无可读写数据，此时流才知道到达了结尾，这时才将标志eofbit修改为true.
-也就是说，读取到最后一行(12,12),(13,13)(14,14)时，标志位还没有修改true,接着继续运行，发现已经到文件尾，才设置，这时，
-所保存的变量是上一次的值，因此也就会增加一个数据。&lt;/p&gt;
-
-&lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
-&lt;p&gt;C++流的使用还是存在坑的～～。&lt;/p&gt;
-</description>
-        <pubDate>Sat, 22 Oct 2016 15:40:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/10/ifstream%E5%92%8Ceof%E7%9A%84%E4%BD%BF%E7%94%A8/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/10/ifstream%E5%92%8Ceof%E7%9A%84%E4%BD%BF%E7%94%A8/</guid>
-        
-        <category>c++</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>glog源码（2）</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
-
-&lt;p&gt;[15:40 ]&lt;/p&gt;
-
-&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
-&lt;p&gt;前面大概讲解一下glog的关键类，下面将会针对与LogMessage类。以下代码由于glog进行裁剪过来的。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//用于输出消息，当写满消息后，调用析构函数，使用Flush
-class GOOGLE_GLOG_DLL_DECL LogMessage {
-public:
-  enum {
-    kNoLogPrefix = -1
-  };
-
-  class GOOGLE_GLOG_DLL_DECL LogStream : public std::ostream {
-
-  public:
-    LogStream(char *buf, int len, int ctr)
-        : std::ostream(NULL),
-          streambuf_(buf, len),
-          ctr_(ctr),
-          self_(this) {
-      rdbuf(&amp;amp;streambuf_);
-    }
-
-    int ctr() const { return ctr_; }
-    void set_ctr(int ctr) { ctr_ = ctr; }
-    LogStream* self() const { return self_; }
-
-    // Legacy std::streambuf methods.
-    size_t pcount() const { return streambuf_.pcount(); }
-    char* pbase() const { return streambuf_.pbase(); }
-    char* str() const { return pbase(); }
-
-  private:
-    LogStream(const LogStream&amp;amp;);  //！对象语义 而不是值语义
-    LogStream&amp;amp; operator=(const LogStream&amp;amp;); //！对象语义 而不是值语义
-    base_logging::LogStreamBuf streambuf_;
-    int ctr_;  // Counter hack (for the LOG_EVERY_X() macro)
-    LogStream *self_;  // Consistency check hack
-  };
-
-public:
-  // icc 8 requires this typedef to avoid an internal compiler error.
-  typedef void (LogMessage::*SendMethod)();
-
-  LogMessage(const char* file, int line, LogSeverity severity, int ctr,
-             SendMethod send_method);
-
-  // Two special constructors that generate reduced amounts of code at
-  // LOG call sites for common cases.
-
-  // Used for LOG(INFO): Implied are:
-  // severity = INFO, ctr = 0, send_method = &amp;amp;LogMessage::SendToLog.
-  //
-  // Using this constructor instead of the more complex constructor above
-  // saves 19 bytes per call site.
-  LogMessage(const char* file, int line);
-
-  // Used for LOG(severity) where severity != INFO.  Implied
-  // are: ctr = 0, send_method = &amp;amp;LogMessage::SendToLog
-  //
-  // Using this constructor instead of the more complex constructor above
-  // saves 17 bytes per call site.
-  LogMessage(const char* file, int line, LogSeverity severity);
-
-  // Constructor to log this message to a specified sink (if not NULL).
-  // Implied are: ctr = 0, send_method = &amp;amp;LogMessage::SendToSinkAndLog if
-  // also_send_to_log is true, send_method = &amp;amp;LogMessage::SendToSink otherwise.
-  LogMessage(const char* file, int line, LogSeverity severity, LogSink* sink,
-             bool also_send_to_log);
-
-  // Constructor where we also give a vector&amp;lt;string&amp;gt; pointer
-  // for storing the messages (if the pointer is not NULL).
-  // Implied are: ctr = 0, send_method = &amp;amp;LogMessage::SaveOrSendToLog.
-  LogMessage(const char* file, int line, LogSeverity severity,
-             std::vector&amp;lt;std::string&amp;gt;* outvec);
-
-  // Constructor where we also give a string pointer for storing the
-  // message (if the pointer is not NULL).  Implied are: ctr = 0,
-  // send_method = &amp;amp;LogMessage::WriteToStringAndLog.
-  LogMessage(const char* file, int line, LogSeverity severity,
-             std::string* message);
-
-  // A special constructor used for check failures
-  LogMessage(const char* file, int line, const CheckOpString&amp;amp; result);
-
-  ~LogMessage();
-
-  // Flush a buffered message to the sink set in the constructor.  Always
-  // called by the destructor, it may also be called from elsewhere if
-  // needed.  Only the first call is actioned; any later ones are ignored.
-  void Flush();
-
-  // An arbitrary limit on the length of a single log message.  This
-  // is so that streaming can be done more efficiently.
-  static const size_t kMaxLogMessageLen;
-
-  // Theses should not be called directly outside of logging.*,
-  // only passed as SendMethod arguments to other LogMessage methods:
-  void SendToLog();  // Actually dispatch to the logs
-  void SendToSyslogAndLog();  // Actually dispatch to syslog and the logs
-
-  // Call abort() or similar to perform LOG(FATAL) crash.
-  static void  Fail();
-
-  std::ostream&amp;amp; stream();
-
-  int preserved_errno() const;
-
-  // Must be called without the log_mutex held.  (L &amp;lt; log_mutex)
-  static int64 num_messages(int severity);
-
-  struct LogMessageData;
-
-private:
-  // Fully internal SendMethod cases:
-  void SendToSinkAndLog();  // Send to sink if provided and dispatch to the logs
-  void SendToSink();  // Send to sink if provided, do nothing otherwise.
-
-  // Write to string if provided and dispatch to the logs.
-  void WriteToStringAndLog();
-
-  void SaveOrSendToLog();  // Save to stringvec if provided, else to logs
-
-  void Init(const char* file, int line, LogSeverity severity,
-            void (LogMessage::*send_method)());
-
-  // Used to fill in crash information during LOG(FATAL) failures.
-  void RecordCrashReason(glog_internal_namespace_::CrashReason* reason);
-
-  // Counts of messages sent at each priority:
-  static int64 num_messages_[NUM_SEVERITIES];  // under log_mutex
-
-  // We keep the data in a separate struct so that each instance of
-  // LogMessage uses less stack space.
-  LogMessageData* allocated_;
-  LogMessageData* data_;
-
-  friend class LogDestination;
-
-  LogMessage(const LogMessage&amp;amp;); //！对象语义 而不是值语义
-  void operator=(const LogMessage&amp;amp;);//！对象语义 而不是值语义
-};
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;从源码中，LogMessage有很多的构造函数。&lt;strong&gt;在源码中有说明最好不要使用LogMessage的构造函数来生成日志信息&lt;/strong&gt;。下面用其的构造函数来生成日记信息，看看效果如何：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int main(int argc , char * argv[]){
-
-	google::InitGoogleLogging(argv[0]);
-	std::string strMsg = &quot;string&quot;;
-	const char *file = &quot;file&quot;;
-	google::LogMessage myLog(file, 20, 0, &amp;amp;strMsg);
-	myLog.stream() &amp;lt;&amp;lt; &quot;test!!!!!&quot;;
-	myLog.Flush();
-	return EXIT_SUCCESS;
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;打印出来的日记信息：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Log file created at: 2016/09/10 17:00:38
-Running on machine: WUYUCHUN-PC
-Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
-I0910 17:00:38.834996  4088 file:20] test!!!!!
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;从结果中看来与使用  &lt;strong&gt;LOG(INFO)«“test!!!!!”&lt;/strong&gt;  的效果是一样的，从这里也可以看出调用流程。&lt;/p&gt;
-
-&lt;h1 id=&quot;原理&quot;&gt;原理&lt;/h1&gt;
-&lt;p&gt;glog借助ostream来实现日记消息的输出，通过对ostream进行继承重写定义自己的输出的格式，从以上的代码就可以看出。在这里先提示ostream如何进行 &lt;strong&gt;“类型可扩展”&lt;/strong&gt; 。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class Date{
-public:
-    Date(int year,int month, int day):year_(year),month_(month),day_(day){
-        ;
-    }
-    void writeTo(std::ostream &amp;amp;os) const{
-        os &amp;lt;&amp;lt; year_ &amp;lt;&amp;lt; month_ &amp;lt;&amp;lt; day_;
-    }
-private:
-    int year_,month_,data_;
-}
-
-std::ostream &amp;amp;operator &amp;lt;&amp;lt; (std::ostream, const Date &amp;amp;date){
-    data.writeTo(os);
-    return os;
-}
-
-int main(int argc, char *argv[]){
-    Date date(2000,0,0);
-    std::cout &amp;lt;&amp;lt; date &amp;lt;&amp;lt; std::endl;
-}
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;从这里可以看出，glog在输出消息的时候选用ostream，以便能自己进行扩展。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;// Output the COUNTER value. This is only valid if ostream is a
-// LogStream.
-ostream&amp;amp; operator&amp;lt;&amp;lt;(ostream &amp;amp;os, const PRIVATE_Counter&amp;amp;) {
-#ifdef DISABLE_RTTI
-	LogMessage::LogStream *log = static_cast&amp;lt;LogMessage::LogStream*&amp;gt;(&amp;amp;os);
-#else
-	LogMessage::LogStream *log = dynamic_cast&amp;lt;LogMessage::LogStream*&amp;gt;(&amp;amp;os);
-#endif
-	CHECK(log &amp;amp;&amp;amp; log == log-&amp;gt;self())
-		&amp;lt;&amp;lt; &quot;You must not use COUNTER with non-glog ostream&quot;;
-	os &amp;lt;&amp;lt; log-&amp;gt;ctr();
-	return os;
-}
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nl&quot;&gt;Q:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;How&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;you&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;detailed&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;profile&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;of&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;CUDA&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;kernel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;?&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;When&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;profiling&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;I&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;use&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;this&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;nvprof&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;kernels&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;kernelName&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;--&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;metrics&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;listOfMetrics&quot;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;your&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;application&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;Now&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;the&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;useful&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;metrics&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eligible_warps_per_cycle&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;achieved_occupancy&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;sm_efficiency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;alu_fu_utilization&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;dram_utilization&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;inst_replay_overhead&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gst_transactions_per_request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;l2_utilization&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gst_requested_throughput&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;flop_count_dp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gld_transactions_per_request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;global_cache_replay_overhead&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;flop_dp_efficiency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gld_efficiency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;gld_throughput&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;l2_write_throughput&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;l2_read_throughput&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
 &lt;blockquote&gt;
-  &lt;p&gt;iostream 的另外一个问题是线程安全性。stdio 的函数是线程安全的，而且 C 语言还提供了 flockfile(3)/funlockfile(3) 之类的函数来明确控制 FILE* 的加锁与解锁。
-iostream 在线程安全方面没有保证，就算单个 operator« 是线程安全的，也不能保证原子性。因为 cout « a « b; 是两次函数调用，
-相当于 cout.operator«(a).operator«(b)。两次调用中间可能会被打断进行上下文切换，造成输出内容不连续，插入了其他线程打印的字符。
-而 fprintf(stdout, “%s %d”, a, b); 是一次函数调用，而且是线程安全的，打印的内容不会受其他线程影响。因此，iostream 并不适合在多线程程序中做 logging。
-&lt;a href=&quot;http://www.cnblogs.com/Solstice/archive/2011/07/17/2108715.html&quot;&gt;链接&lt;/a&gt;&lt;/p&gt;
+  &lt;p&gt;To collect all events available on each device, use the option –events all.
+To collect all metrics available on each device, use the option –metrics all.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;p&gt;glog使用LogMessageData数据结构来组织消息，代码给出的解释的为 &lt;strong&gt;we keep the data in a spearate struct so that each instance of LogMessage uses less stack 
-space&lt;/strong&gt;&lt;/p&gt;
+&lt;h3 id=&quot;eventmetric-跟踪模式&quot;&gt;event/metric 跟踪模式&lt;/h3&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;struct LogMessage::LogMessageData  {
-	LogMessageData();
+&lt;h2 id=&quot;profiling控制&quot;&gt;profiling控制&lt;/h2&gt;
 
-	int preserved_errno_;      // preserved errno
-	// Buffer space; contains complete message text.
-	char message_text_[LogMessage::kMaxLogMessageLen+1];
-	LogStream stream_;
-	char severity_;      // What level is this LogMessage logged at?
-	int line_;                 // line number where logging call is.
-	void (LogMessage::*send_method_)();  // Call this in destructor to send
-	union {  // At most one of these is used: union to keep the size low.
-		LogSink* sink_;             // NULL or sink to send message to
-		std::vector&amp;lt;std::string&amp;gt;* outvec_; // NULL or vector to push message onto
-		std::string* message_;             // NULL or string to write message into
-	};
-	time_t timestamp_;            // Time of creation of LogMessage
-	struct ::tm tm_time_;         // Time of creation of LogMessage
-	size_t num_prefix_chars_;     // # of chars of prefix in this message
-	size_t num_chars_to_log_;     // # of chars of msg to send to log
-	size_t num_chars_to_syslog_;  // # of chars of msg to send to syslog
-	const char* basename_;        // basename of file that called LOG
-	const char* fullname_;        // fullname of file that called LOG
-	bool has_been_flushed_;       // false =&amp;gt; data has not been flushed
-	bool first_fatal_;            // true =&amp;gt; this was first fatal msg
+&lt;h3 id=&quot;unified-memory-profiling&quot;&gt;Unified Memory Profiling&lt;/h3&gt;
 
-private:
-	LogMessageData(const LogMessageData&amp;amp;);
-	void operator=(const LogMessageData&amp;amp;);
-};
+&lt;h3 id=&quot;cpu-thread-tracing&quot;&gt;CPU Thread Tracing&lt;/h3&gt;
+
+&lt;h2 id=&quot;输出&quot;&gt;输出&lt;/h2&gt;
+
+&lt;h3 id=&quot;重定向输出&quot;&gt;重定向输出&lt;/h3&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;--log-file %1 ： output to stdout
+--logfile &amp;lt;filename&amp;gt; : ouput to file
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;dependency-analysis&quot;&gt;Dependency Analysis&lt;/h2&gt;
+
+&lt;h2 id=&quot;cpu采样&quot;&gt;CPU采样&lt;/h2&gt;
+
+&lt;h1 id=&quot;远程prifiling&quot;&gt;远程prifiling&lt;/h1&gt;
+
+&lt;p&gt;两种远程profiler的方式&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;配置nsight或visual prolifer&lt;/li&gt;
+  &lt;li&gt;使用nvprof来收集数据，然后用nvvp来展示&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;visual-profier-远程profiler&quot;&gt;visual profier 远程profiler&lt;/h2&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;To use the Visual Profiler remote profiling you must install the same version of the CUDA Toolkit on both the host and remote systems.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;远程nvprof&quot;&gt;远程nvprof&lt;/h2&gt;
+
+&lt;h1 id=&quot;nvtx&quot;&gt;NVTX&lt;/h1&gt;
+
+&lt;p&gt;NVIDIA Tools Extension（NVTX）是基于C的应用程序编程接口（API），用于注释应用程序中的事件，代码范围和资源。 集成了NVTX的应用程序可以使用Visual Profiler捕获和可视化这些事件和范围。 NVTX API提供两项核心服务：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;追踪CPU事件和时间范围&lt;/li&gt;
+  &lt;li&gt;os的名字以及cuda的资源&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;api浏览&quot;&gt;API浏览&lt;/h2&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;这个是怎么用呢？有什么用处呢？&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;mpi-profiler&quot;&gt;MPI profiler&lt;/h1&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://devblogs.nvidia.com/gpu-pro-tip-track-mpi-calls-nvidia-visual-profiler/&quot;&gt;博客中的例子&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;mps-profiler&quot;&gt;MPS profiler&lt;/h1&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;如何使用&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;metrics-profiler&quot;&gt;metrics profiler&lt;/h1&gt;
+
+&lt;h2 id=&quot;3x计算力的metrics&quot;&gt;3.x计算力的metrics&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;achieved_occupancy&lt;/th&gt;
+      &lt;th&gt;每个活动cycle的平均活动warp数与一个多处理器上支持的最大扭曲数之比&lt;/th&gt;
+      &lt;th&gt; &lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;alu_fu_utilization&lt;/td&gt;
+      &lt;td&gt;执行整数和浮点算术指令的多处理器功能单元的利用率级别（范围0-10）&lt;/td&gt;
+      &lt;td&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;atomic_replay_overhead&lt;/td&gt;
+      &lt;td&gt;由于执行的每条指令的原子和reduction bank冲突导致的平均重播次数&lt;/td&gt;
+      &lt;td&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;atomic_throughput&lt;/td&gt;
+      &lt;td&gt;全局内存原子和reduction的吞吐量&lt;/td&gt;
+      &lt;td&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;atomic_transactions&lt;/td&gt;
+      &lt;td&gt;全局内存原子和reduction的事务&lt;/td&gt;
+      &lt;td&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;atomic_transactions_per_request&lt;/td&gt;
+      &lt;td&gt;每个原子和约简指令执行的全局内存原子和约简事务的平均数量&lt;/td&gt;
+      &lt;td&gt; &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;针对于不同的计算能力有不同的metrics&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;warp状态&quot;&gt;warp状态&lt;/h1&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li&gt;
+    &lt;p&gt;指令发射状态：一条指令或一对独立的指令是由warp发出的。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;停滞：在&lt;strong&gt;PC采样视图&lt;/strong&gt;中的源级或内核级的延迟分析中使用 “Examine Stall Reasons “可以看到滞留原因的分布。&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;停滞不前的指令提取—-下一条指令还没来得及发出。
+        &lt;ul&gt;
+          &lt;li&gt;如果内核中的大循环已经被解压，请尝试减少它们。&lt;/li&gt;
+          &lt;li&gt;如果内核中包含许多小函数的调用，尝试内联更多的小函数。用 &lt;strong&gt;inline&lt;/strong&gt; 或 &lt;strong&gt;forceinline&lt;/strong&gt; 修饰符。反之，如果内联许多函数或大型函数，请尝试__noinline__来禁用内嵌式的这些函数。&lt;/li&gt;
+          &lt;li&gt;对于非常短的内核，考虑融合成一个单一的内核。&lt;/li&gt;
+          &lt;li&gt;如果使用较少的线程块，考虑使用更少的线程块。线程。偶尔调用 __syncthreads()将使经线程保持同步。这可能会提高指令缓存的命中率。&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因执行依赖性而停滞 - –下一条指令正在等待一个或多个输入被前面的指令计算。&lt;/p&gt;
+
+    &lt;p&gt;为了减少执行依赖性停顿，可以尝试增加指令级并行化（ILP）。例如，可以通过增加循环解卷或每个线程处理几个元素来实现。这可以防止线程通过每条指令的全部延迟来防止线程闲置。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因内存依赖而停滞–下一条指令正在等待前一条内存访问完成。&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;试着提高内存凝聚力和/或读取字节的效率。(对齐等)。看源头层面的分析 “全局内存访问”。
+模式 “和/或指标gld_efficiency和gst_efficiency。&lt;/li&gt;
+      &lt;li&gt;尝试增加内存级并行度（MLP）：内存级并行度（MLP）的数量。每个线程飞行中的独立内存操作。循环开卷。加载向量类型，如float4，并对每个元素进行多元素处理。线程都是增加内存级并行性的方法。&lt;/li&gt;
+      &lt;li&gt;考虑将经常访问的数据移到更接近SM，例如通过使用 共享内存或只读数据缓存。&lt;/li&gt;
+      &lt;li&gt;考虑尽可能地重新计算数据，而不是从 设备内存。&lt;/li&gt;
+      &lt;li&gt;如果本地存储器访问量大，可考虑增加每个寄存器的数量。线路，以减少溢出，即使是以占用为代价，因为当地的 内存访问只缓存在L2中，对于具有计算能力的GPU来说，内存访问只缓存在L2中。主版本=5。&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因内存节流而停滞不前 - –大量未完成的内存请求阻碍了前向进展。在具有计算能力major = 3的GPU上，内存节流表示内存重播数量较多。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;纹理停滞–纹理子系统已被充分利用或有太多的未完成请求。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;停滞不前的同步—-warp在同步指令后等待所有线程同步。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因持续依赖内存而停滞不前&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因管道繁忙而停滞—-因为执行下一条指令所需的功能单元忙，所以warp停滞。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;停滞的原因是未被选中–warp已经准备好了，但由于其他warp被选中发行，所以没有机会发行。这个原因一般说明内核可能优化得很好，但在某些情况下，你可以在不影响延迟隐藏的情况下降低占用率，这样做可能有助于提高缓存命中率。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;
+    &lt;p&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;如何分析一个kernel函数？&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Sat, 16 May 2020 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/profiler_cuda/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/profiler_cuda/</guid>
+        
+        
+      </item>
+    
+      <item>
+        <title>cuda的编译</title>
+        <description>&lt;p&gt;[TOC]&lt;/p&gt;
+
+&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;这里主要介绍nvcc编译器的工作&lt;/p&gt;
+
+&lt;h1 id=&quot;介绍&quot;&gt;介绍&lt;/h1&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;cuda的源文件是如何编译成可执行文件的&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;编译阶段&quot;&gt;编译阶段&lt;/h1&gt;
+
+&lt;h2 id=&quot;nvcc阶段&quot;&gt;NVCC阶段&lt;/h2&gt;
+
+&lt;p&gt;每当主机程序启动设备代码时，CUDA运行时系统就会对嵌入式的fatbinary进行检查，以获得适合当前GPU的fatbinary映像。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-15-09-32-19-nvcc-build.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;例子&quot;&gt;例子&lt;/h2&gt;
+
+&lt;p&gt;这个例子讲解cuda如何编译到可执行文件中&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;编写一个包含kernel以及kernel调用的.cu文件，输入一下命令&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nvcc &lt;span class=&quot;nt&quot;&gt;-cuda&lt;/span&gt; p46.cu &lt;span class=&quot;nt&quot;&gt;--keep&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;或者下面的命令：&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nvcc &lt;span class=&quot;nt&quot;&gt;--compile-only&lt;/span&gt; p46.cu &lt;span class=&quot;nt&quot;&gt;--keep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--dryrun&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--verbose&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;输出的结果：&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ _SPACE_= &lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ _CUDART_=cudart&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ _HERE_=/usr/local/cuda/bin&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ _THERE_=/usr/local/cuda/bin&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ _TARGET_SIZE_=&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ _TARGET_DIR_=&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ _TARGET_SIZE_=64&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ TOP=/usr/local/cuda/bin/..&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ NVVMIR_LIBRARY_DIR=/usr/local/cuda/bin/../nvvm/libdevice&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ LD_LIBRARY_PATH=/usr/local/cuda/bin/../lib:/usr/local/cuda/lib64:&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ PATH=/usr/local/cuda/bin/../nvvm/bin:/usr/local/cuda/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ INCLUDES=&quot;-I/usr/local/cuda/bin/..//include&quot;  &lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ LIBRARIES=  &quot;-L/usr/local/cuda/bin/..//lib64/stubs&quot; &quot;-L/usr/local/cuda/bin/..//lib64&quot;&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ CUDAFE_FLAGS=&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ PTXAS_FLAGS=&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ gcc -std=c++14 -D__CUDA_ARCH__=300 -E -x c++  -DCUDA_DOUBLE_MATH_FUNCTIONS -D__CUDACC__ -D__NVCC__  &quot;-I/usr/local/cuda/bin/..//include&quot;    -D__CUDACC_VER_MAJOR__=10 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=130 -include &quot;cuda_runtime.h&quot; -m64 &quot;p46.cu&quot; &amp;gt; &quot;p46.cpp1.ii&quot; &lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ cicc --c++14 --gnu_version=70500 --allow_managed   -arch compute_30 -m64 -ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 --include_file_name &quot;p46.fatbin.c&quot; -tused -nvvmir-library &quot;/usr/local/cuda/bin/../nvvm/libdevice/libdevice.10.bc&quot; --gen_module_id_file --module_id_file_name &quot;p46.module_id&quot; --orig_src_file_name &quot;p46.cu&quot; --gen_c_file_name &quot;p46.cudafe1.c&quot; --stub_file_name &quot;p46.cudafe1.stub.c&quot; --gen_device_file_name &quot;p46.cudafe1.gpu&quot;  &quot;p46.cpp1.ii&quot; -o &quot;p46.ptx&quot;&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ ptxas -arch=sm_30 -m64  &quot;p46.ptx&quot;  -o &quot;p46.sm_30.cubin&quot; &lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ fatbinary --create=&quot;p46.fatbin&quot; -64 &quot;--image=profile=sm_30,file=p46.sm_30.cubin&quot; &quot;--image=profile=compute_30,file=p46.ptx&quot; --embedded-fatbin=&quot;p46.fatbin.c&quot; --cuda&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ gcc -std=c++14 -E -x c++ -D__CUDACC__ -D__NVCC__  &quot;-I/usr/local/cuda/bin/..//include&quot;    -D__CUDACC_VER_MAJOR__=10 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=130 -include &quot;cuda_runtime.h&quot; -m64 &quot;p46.cu&quot; &amp;gt; &quot;p46.cpp4.ii&quot; &lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ cudafe++ --c++14 --gnu_version=70500 --allow_managed  --m64 --parse_templates --gen_c_file_name &quot;p46.cudafe1.cpp&quot; --stub_file_name &quot;p46.cudafe1.stub.c&quot; --module_id_file_name &quot;p46.module_id&quot; &quot;p46.cpp4.ii&quot; &lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#$ gcc -std=c++14 -D__CUDA_ARCH__=300 -c -x c++  -DCUDA_DOUBLE_MATH_FUNCTIONS &quot;-I/usr/local/cuda/bin/..//include&quot;   -m64 -o &quot;p46.o&quot; &quot;p46.cudafe1.cpp&quot; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;其中keep表示保留中间结果。&lt;/p&gt;
+
+    &lt;p&gt;在相应的目录下有如下的结果：&lt;/p&gt;
+
+    &lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-15-09-52-27-build_result.png&quot; alt=&quot;编译结果&quot; /&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;拆解一下上面终端的输出结果：&lt;/p&gt;
+
+    &lt;p&gt;环境变量的什么就不说了&lt;/p&gt;
+
+    &lt;p&gt;1）p46.cu–&amp;gt;p46.cpp1.ii&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ gcc -std=c++14 -D__CUDA_ARCH__=300 -E -x c++  -DCUDA_DOUBLE_MATH_FUNCTIONS -D__CUDACC__ -D__NVCC__  &quot;-I/usr/local/cuda/bin/..//include&quot;    -D__CUDACC_VER_MAJOR__=10 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=130 -include &quot;cuda_runtime.h&quot; -m64 &quot;p46.cu&quot; &amp;gt; &quot;p46.cpp1.ii&quot; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;2）p46.cpp1.ii—&amp;gt;p46.ptx&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ cicc --c++14 --gnu_version=70500 --allow_managed   -arch compute_30 -m64 -ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 --include_file_name &quot;p46.fatbin.c&quot; -tused -nvvmir-library &quot;/usr/local/cuda/bin/../nvvm/libdevice/libdevice.10.bc&quot; --gen_module_id_file --module_id_file_name &quot;p46.module_id&quot; --orig_src_file_name &quot;p46.cu&quot; --gen_c_file_name &quot;p46.cudafe1.c&quot; --stub_file_name &quot;p46.cudafe1.stub.c&quot; --gen_device_file_name &quot;p46.cudafe1.gpu&quot;  &quot;p46.cpp1.ii&quot; -o &quot;p46.ptx&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;3）ptx–&amp;gt;cubin&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ ptxas -arch=sm_30 -m64  &quot;p46.ptx&quot;  -o &quot;p46.sm_30.cubin&quot; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;4）cubin–&amp;gt;fatbin&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ fatbinary --create=&quot;p46.fatbin&quot; -64 &quot;--image=profile=sm_30,file=p46.sm_30.cubin&quot; &quot;--image=profile=compute_30,file=p46.ptx&quot; --embedded-fatbin=&quot;p46.fatbin.c&quot; --cuda&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;5）cpp–&amp;gt;cpp4.ii&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ gcc -std=c++14 -E -x c++ -D__CUDACC__ -D__NVCC__  &quot;-I/usr/local/cuda/bin/..//include&quot;    -D__CUDACC_VER_MAJOR__=10 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=130 -include &quot;cuda_runtime.h&quot; -m64 &quot;p46.cu&quot; &amp;gt; &quot;p46.cpp4.ii&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;6）&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#$ cudafe++ --c++14 --gnu_version=70500 --allow_managed  --m64 --parse_templates --gen_c_file_name &quot;p46.cudafe1.cpp&quot; --stub_file_name &quot;p46.cudafe1.stub.c&quot; --module_id_file_name &quot;p46.module_id&quot; &quot;p46.cpp4.ii&quot; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;7）&lt;/p&gt;
+
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;gcc &lt;span class=&quot;nt&quot;&gt;-std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;c++14 &lt;span class=&quot;nt&quot;&gt;-D__CUDA_ARCH__&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;300 &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-x&lt;/span&gt; c++  &lt;span class=&quot;nt&quot;&gt;-DCUDA_DOUBLE_MATH_FUNCTIONS&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-I/usr/local/cuda/bin/..//include&quot;&lt;/span&gt;   &lt;span class=&quot;nt&quot;&gt;-m64&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;p46.o&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;p46.cudafe1.cpp&quot;&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;查看p46.ptx以及p46.sm_30.cubin&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;//&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Generated by NVIDIA NVVM Compiler&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;//&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Compiler Build ID: CL-24817639&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Cuda compilation tools, release 10.0, V10.0.130&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Based on LLVM 3.4svn&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;//&lt;/span&gt;
+
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;version&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;6.3&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;target&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sm_30&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;address_size&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;64&lt;/span&gt;
+
+	&lt;span class=&quot;c1&quot;&gt;// .globl	_Z3addiiPi&lt;/span&gt;
+
+&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;visible&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;entry&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;_Z3addiiPi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;param&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u32&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_Z3addiiPi_param_0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;param&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u32&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_Z3addiiPi_param_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;param&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u64&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_Z3addiiPi_param_2&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b32&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b64&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+
+	&lt;span class=&quot;n&quot;&gt;ld&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;param&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u32&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_Z3addiiPi_param_0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;ld&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;param&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u32&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_Z3addiiPi_param_1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;ld&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;param&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u64&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rd1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_Z3addiiPi_param_2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;cvta&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;global&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u64&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rd2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rd1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;add&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;s32&lt;/span&gt; 	&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;st&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;global&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;u32&lt;/span&gt; 	&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rd2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;&lt;strong&gt;cubin&lt;/strong&gt; ， &lt;strong&gt;ptx&lt;/strong&gt; 是如何组织到 &lt;strong&gt;exe&lt;/strong&gt; 中，又是如何被加载到驱动中去的&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;编译选项&quot;&gt;编译选项&lt;/h1&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;这里有很多的编译选项，可以显示很多的有用信息&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;gpu-汇编&quot;&gt;GPU 汇编&lt;/h1&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-16-09-49-40-virtual_and_real.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;通过编译查看kernel的资源使用&quot;&gt;通过编译查看kernel的资源使用&lt;/h1&gt;
+
+&lt;p&gt;命令如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;nvcc &lt;span class=&quot;nt&quot;&gt;--resource-usage&lt;/span&gt; p46.cu
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;结果如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry &lt;span class=&quot;k&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'_Z3addiiPi'&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'sm_30'&lt;/span&gt;
+ptxas info    : Function properties &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;_Z3addiiPi
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 5 registers, 336 bytes cmem[0]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As shown in the above example, the amounts of statically allocated global memory (gmem) and constant memory in bank 0 (cmem) are listed.&lt;/p&gt;
+
+&lt;p&gt;stack fram是每个线程的堆栈使用量。溢出存储和加载表示在堆栈内存上完成的存储和加载，这些存储和加载用于存储不能分配给物理寄存器的变量。&lt;/p&gt;
+</description>
+        <pubDate>Sat, 09 May 2020 14:29:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/cuda%E7%9A%84%E7%BC%96%E8%AF%91/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/cuda%E7%9A%84%E7%BC%96%E8%AF%91/</guid>
+        
+        <category>GPU</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>cuda的最佳实践</title>
+        <description>&lt;p&gt;[TOC]&lt;/p&gt;
+
+&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;这个是用来指导如何从gpu中获取最好的性能。&lt;/p&gt;
+
+&lt;p&gt;一般的优化是按照下面的流程来的：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-09-08-31-34-APOD.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;评估：识别算法的瓶颈，评估热点函数，确定工作量&lt;/p&gt;
+
+&lt;p&gt;并行化：开发cuda代码或者调用现有的cuda相关的库：cuBLAS等&lt;/p&gt;
+
+&lt;p&gt;优化：慢慢来&lt;/p&gt;
+
+&lt;p&gt;部署：&lt;/p&gt;
+
+&lt;h2 id=&quot;异构计算&quot;&gt;异构计算&lt;/h2&gt;
+
+&lt;p&gt;主机和设备之间的区别：主要是线程模型以及物理存储&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;线程资源&lt;/li&gt;
+  &lt;li&gt;线程：cpu切换线程代价比gpu上切换线程要大&lt;/li&gt;
+  &lt;li&gt;RAM&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;考虑下面的情况，两个N*N的矩阵&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;加法运算：NxN的计算，搬运数据是3NxN&lt;/li&gt;
+  &lt;li&gt;乘法运算：N×NxN的计算&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;优化的建议&quot;&gt;优化的建议&lt;/h1&gt;
+
+&lt;p&gt;&lt;strong&gt;最高优先级：为了最大程度地提高开发人员的生产力，请对应用程序进行性能分析，以确定热点和瓶颈。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;最高优先级: To get the maximum benefit from CUDA, focus first on finding ways to
+parallelize sequential code.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;profile&quot;&gt;Profile&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;先用gprof来识别出c++代码（cpu）中的热点&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;利用Amdahl’s or Gustafson’s Law来确定算法加速的上界&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;并行化&quot;&gt;并行化&lt;/h2&gt;
+
+&lt;p&gt;几种把代码并行化的策略&lt;/p&gt;
+
+&lt;h3 id=&quot;并行库&quot;&gt;并行库&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;cuBLAS&lt;/li&gt;
+  &lt;li&gt;cuFFT&lt;/li&gt;
+  &lt;li&gt;Thrust：扫描、排序、规约&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;设置并行编译选项&quot;&gt;设置并行编译选项&lt;/h3&gt;
+
+&lt;p&gt;通过设置编译选项来使得代码并行化&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;&lt;strong&gt;OpenACC？这个是标准是什么？&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;编写cuda代码&quot;&gt;编写cuda代码&lt;/h3&gt;
+
+&lt;h1 id=&quot;获取正确的结果&quot;&gt;获取正确的结果&lt;/h1&gt;
+
+&lt;h2 id=&quot;debug&quot;&gt;Debug&lt;/h2&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;cuda-gdb 这个要用起来&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;性能指标metrics&quot;&gt;性能指标（Metrics）&lt;/h1&gt;
+
+&lt;p&gt;在优化cuda代码的时候，需要了解如何准确地测量性能以及性能在整体中扮演的角色。&lt;/p&gt;
+
+&lt;h2 id=&quot;时间&quot;&gt;时间&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;cpu时间&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;如何测量cpu的时间&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;gpu时间&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;如何测量gpu的时间&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;带宽&quot;&gt;带宽&lt;/h2&gt;
+
+&lt;p&gt;数据的排布影响数据传输&lt;/p&gt;
+
+&lt;p&gt;为了衡量性能，必须进行理论带宽统计以及实际带宽统计&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;高优先级：在衡量性能和优化收益时，将计算的有效带宽用作度量标准。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;理论带宽的计算&quot;&gt;理论带宽的计算&lt;/h3&gt;
+
+&lt;p&gt;例子：Tesla 使用GDDR5（双数据），1.85GHz，384-bit带宽&lt;/p&gt;
+
+&lt;p&gt;177.6GB/s=(1.85&lt;em&gt;10”9&lt;/em&gt;(348/8)*2/10”9)—其中“表示幂&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;公式：&lt;/strong&gt;
+\(带宽=(GHz*带宽/8*2)\)&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;注意：启用ECC时，有效的最大带宽会因内存校验和的额外流量而减少大约20％，尽管ECC对带宽的确切影响取决于内存访问模式。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;实际带宽的计算&quot;&gt;实际带宽的计算&lt;/h3&gt;
+
+&lt;p&gt;公式：&lt;/p&gt;
+
+&lt;p&gt;\(有效带宽=(b_r+b_w)/time\)
+Br is the number of bytes read per kernel, Bw is the number of bytes written per kernel, and time is given in seconds.&lt;/p&gt;
+
+&lt;h3 id=&quot;通过profiler测量吞吐&quot;&gt;通过Profiler测量吞吐&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Requested Global Load Throughput&lt;/li&gt;
+  &lt;li&gt;Requested Global Store Throughput&lt;/li&gt;
+  &lt;li&gt;Global Load Throughput、&lt;/li&gt;
+  &lt;li&gt;Global Store Throughput&lt;/li&gt;
+  &lt;li&gt;DRAM Read Throughput&lt;/li&gt;
+  &lt;li&gt;DRAM Write Throughput&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Requested Global Load Throughput 和 Requested Global Store Throughput 表示内核请求的全局显存的吞吐量，和有效带宽计算的值对应。&lt;/p&gt;
+
+&lt;h1 id=&quot;显存优化&quot;&gt;显存优化&lt;/h1&gt;
+
+&lt;p&gt;内存优化是提高性能的最重要领域，通过最大化带宽来最大程度利用硬件。&lt;/p&gt;
+
+&lt;h2 id=&quot;在主机和设备之间的数据传输&quot;&gt;在主机和设备之间的数据传输&lt;/h2&gt;
+
+&lt;p&gt;主机和设备之间传输的带宽（通过PCIE总线 8GB/s）和设备传输的代码差距比较大&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;高优先级：最大限度地减少主机与设备之间的数据传输，即使这意味着在设备上运行某些内核（与在主机CPU上运行这些内核相比）也未显示出性能提升。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;临时数据结构应在设备内存中创建，由设备操作并销毁，而不要被主机映射或复制到主机内存中。&lt;/p&gt;
+
+&lt;p&gt;将每一次小的传输，变成批量的&lt;/p&gt;
+
+&lt;p&gt;当使用页面锁定（或固定）内存时，可以在主机和设备之间获得更高的带宽。&lt;/p&gt;
+
+&lt;p&gt;但是如何设定固定内存？设定太多的固定内存会影响整体的性能。&lt;/p&gt;
+
+&lt;h3 id=&quot;传输和计算异步&quot;&gt;传输和计算异步&lt;/h3&gt;
+
+&lt;p&gt;传输和计算重叠需要固定内存以及stream&lt;/p&gt;
+
+&lt;p&gt;顺序执行&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;cudaMemcpy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a_d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a_h&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sizeof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;kernel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nThreads&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nThreads&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a_d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;异步执行&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;size&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;sizeof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nStreams&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nStreams&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nStreams&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;cudaMemcpyAsync&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a_d&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a_h&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stream&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]);&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;kernel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nThreads&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nStreams&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nThreads&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stream&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a_d&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-11-09-31-01_execute.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;0拷贝&quot;&gt;0拷贝&lt;/h3&gt;
+
+&lt;p&gt;&lt;strong&gt;低优先级: Use zero-copy operations on integrated GPUs for CUDA Toolkit version 2.2 and later.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;设备显存空间&quot;&gt;设备显存空间&lt;/h2&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-11-09-39-03-spaces_on_device.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-12-09-21-55-存储.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-11-09-41-14-salient_feature_device_memory.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;全局访问&quot;&gt;全局访问&lt;/h3&gt;
+
+&lt;p&gt;&lt;strong&gt;最重要的性能考虑因素可能是全局内存访问的合并。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;高优先级：确保在可能的情况下合并全局内存访问。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;这里的全局访问需要考虑cache L1 和L2&lt;/p&gt;
+
+&lt;p&gt;注意：For devices of compute capability 3.x, accesses to global memory are cached only in L2;
+L1 is reserved for local memory accesses. Some devices of compute capability 3.5, 3.7, or 5.2 allow opt-in caching of globals in L1 as well.&lt;/p&gt;
+
+&lt;p&gt;针对于启用ECC的，也会有影响&lt;/p&gt;
+
+&lt;p&gt;顺序对齐的访问模式，如下所示&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-11_09-52-38-address_warp.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;如果任何线程未请求该行的某些单词（例如，如果多个线程访问了同一单词，或者某些线程未参与访问），则无论如何都将获取高速缓存行中的所有数据。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-11-09-55-43-misaligned_access.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;这里使用了两个128byte L1 cache lines&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;如何做下面的实验呢？并且测量相应的带宽？&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;copy&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;kernel&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;that&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;illustrates&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;misaligned&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;accesses&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;__global__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;offsetCopy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;odata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;idata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xid&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;offset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;odata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;xid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;idata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;xid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;strided 访问&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;A&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;kernel&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;illustrate&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;non&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;unit&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stride&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;copy&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;__global__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;strideCopy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;odata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;idata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stride&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xid&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stride&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;odata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;xid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;idata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;xid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-11-10-16-44-stride_access.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;跨度为2导致负载/存储效率为50％，因为未使用事务中的一半元素，这代表了浪费的带宽。 随着步幅的增加，有效带宽减小，直到为经线中的32个线程加载32行缓存为止。如图8所示。&lt;/p&gt;
+
+&lt;h3 id=&quot;共享内存&quot;&gt;共享内存&lt;/h3&gt;
+
+&lt;p&gt;[]: https://devblogs.nvidia.com/using-shared-memory-cuda-cc/	“ NVIDA”&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;每个SM都有与其关联的相当少量的共享内存，通常为16KB的内存&lt;/strong&gt;。如果每个SM具有16KB的共享内存，并且在一个SM上同时运行4个线程块，则每个线程块可用的最大共享内存量将为16KB / 4（4KB）。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-12-09-24-17-共享内存.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;在kernel中声明共享内存的方式有多种，具体取决于在编译时还是在运行时知道内存量。&lt;/p&gt;
+
+&lt;p&gt;共享内存被分为大小一样的内存banks，并且能同时访问。&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;什么是banks冲突&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-12-10-09-01-bancks-confliks.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;为了最大程度地减少banks冲突，重要的是要了解存储器地址如何映射到banks以及如何优化调度存储请求。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;so bank conflicts can occur between any threads in the warp&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;写一个这样的例子进行运行&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;__global__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;simpleMultiply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;col&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;0.0&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;row&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;row&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;it is necessary to consider how warps access global memory in the for loop.&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;__global__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;coalescedMultiply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;__shared__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;col&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;0.0&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;aTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;row&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;row&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;each element in a tile of A is read from global memory only once, in a fully coalesced fashion (with no wasted bandwidth), to shared memory.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;这说明了当硬件L1高速缓存逐出策略与应用程序的需求不完全匹配时，或者当L1高速缓存不用于从全局内存中读取数据时，将共享内存用作用户管理的高速缓存。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-12-10-13-13-冲突.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-12 10-14-31-foure-confile.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;__global__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;sharedABMultiply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;__shared__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;bTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;row&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;col&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;0.0&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;aTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;row&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;bTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;__syncthreads&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+	&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;TILE_DIM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bTile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;row&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;这里需要把这个写成一个例子进行验证对比（P48)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;使用共享内存的三大原因：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;允许合并访问全局内存&lt;/li&gt;
+  &lt;li&gt;从全局内存中消除冗余负载&lt;/li&gt;
+  &lt;li&gt;为了避免浪费带宽&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;局部存储&quot;&gt;局部存储&lt;/h3&gt;
+
+&lt;p&gt;局部存储并不是代表访问它是很快&lt;/p&gt;
+
+&lt;h3 id=&quot;文本内存&quot;&gt;文本内存&lt;/h3&gt;
+
+&lt;p&gt;文本存储是cached，在kernel调用中，纹理缓存与全局内存写入之间的一致性并不保持一致。&lt;/p&gt;
+
+&lt;h3 id=&quot;常量内存&quot;&gt;常量内存&lt;/h3&gt;
+
+&lt;p&gt;64KB&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The constant memory space is cached&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;执行优化&quot;&gt;执行优化&lt;/h1&gt;
+
+&lt;p&gt;这里关键的是让处理器（sm)尽可能的忙起来，这里的关键概念是并发率&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;中等优先级。为了隐藏由寄存器依赖性引起的延迟，每个多处理器保持足够的活动线程数量（即足够的占用率）。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;中等优先级。每个区块的线程数应该是32个线程的倍数，因为这样可以提供最佳的计算效率，并且有利于凝聚。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;并发率occupancy&quot;&gt;并发率（Occupancy）&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Some metric related to the number of active warps on a multiprocessor is therefore important in determining how effectively the hardware is kept busy. This metric is occupancy.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;更高的占用率并不总是等同于更高的性能，在这一点上，额外的占用率并不能提高性能。 但是，低占用率总是会干扰隐藏内存延迟的能力，从而导致性能下降。&lt;/p&gt;
+
+&lt;p&gt;影响占用率的因素：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;寄存器：So, if each thread block uses many registers, the number of thread blocks that can be resident
+on a multiprocessor is reduced, thereby lowering the occupancy of the multiprocessor。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;数据传输和kener执行的重叠&lt;/p&gt;
+
+&lt;h2 id=&quot;多个上下文context&quot;&gt;多个上下文（context）&lt;/h2&gt;
+
+&lt;p&gt;如果多个CUDA应用进程同时访问同一个GPU，这几乎总是意味着多个上下文，因为除非使用&lt;strong&gt;CUDA多进程服务&lt;/strong&gt;，否则一个上下文被绑定到一个特定的主机进程。&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;cuda多进程服务指的是什么？&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;当上下文切换的频繁的时候，会降低利用率&lt;/p&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; /&gt;主上下文（primary context)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;block以及threads的数量&quot;&gt;block以及threads的数量&lt;/h2&gt;
+
+&lt;p&gt;每个网格的块的尺寸和大小以及每个块的warp的尺寸和大小都是重要的因素。&lt;/p&gt;
+
+&lt;p&gt;When choosing the first execution configuration parameter-the number of blocks per grid, or grid size the primary concern is keeping the entire GPU busy. The number of blocks in a grid should be larger than the number of multiprocessors so that all multiprocessors have at least one block to execute.&lt;/p&gt;
+
+&lt;p&gt;Notify：&lt;strong&gt;例如，将占用率从66%提高到100%，一般情况下并不会带来相同类比的性能提升。占用率较低kenerl的每个线程的可用寄存器数会比高占用率的内核多。这可能导致更少的寄存器溢出到本地内存。通常情况下，一旦占用了达到了50%，额外增加的占用率并不会转化为提高了性能。在某些情况下，即使是在某些情况下，也可以完全覆盖延时，甚至是 更少的翘曲，特别是通过指令级并行化(ILP)。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;经验法则：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;每个块的线程应该是warp大小的倍数，以避免浪费计算时间。&lt;/li&gt;
+  &lt;li&gt;每个块至少应使用64个线程，并且只有在有多个每个多处理器的并发块。&lt;/li&gt;
+  &lt;li&gt;每块128到256个线程之间是一个比较好的选择，也是一个很好的初始范围。使用不同尺寸的线块进行实验。&lt;/li&gt;
+  &lt;li&gt;使用几个（3到4个）小线块，而不是每个大线块。如果延迟影响到性能，多处理器的性能。这对以下几点特别有利经常调用__syncthreads()的内核。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;共享内存-1&quot;&gt;共享内存&lt;/h2&gt;
+
+&lt;p&gt;确定性能对占用率的敏感度的一个有用的技术是通过试验动态分配的共享内存的数量来确定性能对占用率的敏感度，这在执行配置的第三个参数中规定了。通过简单地增加这个参数（不修改内核），可以有效地降低内核的占用率，并测量其对性能的影响。&lt;/p&gt;
+
+&lt;h1 id=&quot;指令优化&quot;&gt;指令优化&lt;/h1&gt;
+
+&lt;p&gt;对于指令的优化，最好的做法就是在高优先级的优化之后在进行&lt;/p&gt;
+
+&lt;h2 id=&quot;算术指令&quot;&gt;算术指令&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;低优先级：使用移位操作，避免昂贵的除法和模数计算。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;中等优先级:只要速度高于精度，就使用快速数学库。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;____sinf(x) and ____expf(x)). Functions following functionName() naming convention are slower but have higher accuracy (e.g., sinf(x) and expf(x)). “&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;The -use_fast_math compiler option of nvcc coerces every functionName() call to the equivalent __functionName() call..&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;内存指令&quot;&gt;内存指令&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;高优先级：尽量减少对全局内存的使用。尽可能选择共享内存访问。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;控制流&quot;&gt;控制流&lt;/h1&gt;
+
+&lt;p&gt;&lt;strong&gt;高优先级:避免同一warp内的不同执行路径。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;低优先级：使编译器能够很容易地使用分支预测来代替循环或控制语句。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;中低优先级：使用有符号整数而不是无符号整数作为循环计数器。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;高优先级：避免在分支代码内部使用__syncthreads()。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;了解编程环境&quot;&gt;了解编程环境&lt;/h1&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-14-08-39-36-platformPackage.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
+
+&lt;p&gt;三个基本策略：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Maximizing parallel execution&lt;/li&gt;
+  &lt;li&gt;Optimizing memory usage to achieve maximum memory bandwidth&lt;/li&gt;
+  &lt;li&gt;Optimizing instruction usage to achieve maximum instruction throughput&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Sat, 09 May 2020 14:29:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/cuda%E7%9A%84%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/cuda%E7%9A%84%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/</guid>
+        
+        <category>GPU</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>Cuda的理解</title>
+        <description>
+&lt;hr /&gt;
+&lt;p&gt;layout: post&lt;/p&gt;
+
+&lt;p&gt;title:  “cuda的理解”&lt;/p&gt;
+
+&lt;p&gt;date:   2020-05-05 14:29&lt;/p&gt;
+
+&lt;p&gt;excerpt:&lt;/p&gt;
+
+&lt;p&gt;tag:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;h2 id=&quot;gpu&quot;&gt;GPU&lt;/h2&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;gpu的演化过程&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-06-08-54-47-cpu-gpu.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;三个抽象&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;线程组&lt;/li&gt;
+  &lt;li&gt;共享内存&lt;/li&gt;
+  &lt;li&gt;同步屏障&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;这些抽象提供了&lt;strong&gt;数据并行性&lt;/strong&gt;以及&lt;strong&gt;线程并行性&lt;/strong&gt;。把一个大问题变成了很多个的子问题。实际上，可以在任何可用的多处理器上调度每个线程块在GPU中以&lt;strong&gt;任何顺序（并发或顺序）&lt;/strong&gt;进行操作，以便编译后的CUDA程序可以在任何数量的多处理器上执行。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/2020-05-06-09-22-59-调度.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;编程模型&quot;&gt;编程模型&lt;/h1&gt;
+
+&lt;h2 id=&quot;kernel&quot;&gt;kernel&lt;/h2&gt;
+
+&lt;p&gt;含义：就是一个c函数，能被N个不同的线程执行N次&lt;/p&gt;
+
+&lt;p&gt;定义：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;function_name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;blockx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;thriedx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;params&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,...)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Q：线程数是不是可以设置很多？它依赖于什么呢？若是设置超过了规定，执行起来会是什么样呢？&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;每一个kernel还有一个Grid，一个grid含有多个block，一个block含有多个thread&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;block的执行是以任何顺序来调度执行。&lt;/p&gt;
+
+&lt;h2 id=&quot;显存的层次&quot;&gt;显存的层次&lt;/h2&gt;
+
+&lt;p&gt;grid中访问的是全局&lt;/p&gt;
+
+&lt;p&gt;block访问的是共享内存&lt;/p&gt;
+
+&lt;p&gt;thread访问的是自己的内存&lt;/p&gt;
+
+&lt;p&gt;还有常量内存以及文本内存&lt;/p&gt;
+
+&lt;h1 id=&quot;编程接口&quot;&gt;编程接口&lt;/h1&gt;
+
+&lt;h2 id=&quot;cuda编译的流程&quot;&gt;cuda编译的流程&lt;/h2&gt;
+
+&lt;h3 id=&quot;ptx&quot;&gt;PTX&lt;/h3&gt;
+
+&lt;p&gt;指令集架构&lt;/p&gt;
+
+&lt;h3 id=&quot;nvcc&quot;&gt;NVCC&lt;/h3&gt;
+
+&lt;p&gt;—&amp;gt; PTX code&lt;/p&gt;
+
+&lt;p&gt;—&amp;gt; cubin object&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;use the CUDA driver API (see Driver API) to load and execute the PTX code or cubin object.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Q：如何编译PTX，如何查看编译过后可执行文件？查看它的反汇编&lt;/p&gt;
+
+&lt;p&gt;-code —-&amp;gt; 表示 cubin objec在要在哪个目标下运行，例如：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sm_35&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;//produces binary code for devices of compute capability 3.5&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;-arch—-&amp;gt;表示PTX的编译情况&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arch&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;compute_30&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;显存的分配方式&quot;&gt;显存的分配方式&lt;/h3&gt;
+
+&lt;p&gt;cudaMalloc&lt;/p&gt;
+
+&lt;p&gt;cudaMallocPitch&lt;/p&gt;
+
+&lt;p&gt;cudaMalloc3D&lt;/p&gt;
+
+&lt;p&gt;cudaHostAlloc&lt;/p&gt;
+
+&lt;p&gt;使用固定内存的好处？&lt;/p&gt;
+
+&lt;h3 id=&quot;streams&quot;&gt;streams&lt;/h3&gt;
+
+&lt;p&gt;这个该如何理解呢？&lt;/p&gt;
+
+&lt;h3 id=&quot;显示同步&quot;&gt;显示同步&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;cudaDeviceSynchronize()&lt;/li&gt;
+  &lt;li&gt;cudaStreamSynchronize()&lt;/li&gt;
+  &lt;li&gt;cudaStreamWaitEvent()&lt;/li&gt;
+  &lt;li&gt;cudaStreamQuery()&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;隐是同步&quot;&gt;隐是同步&lt;/h3&gt;
+
+&lt;p&gt;Two commands from different streams cannot run concurrently。&lt;/p&gt;
+
+&lt;h3 id=&quot;行为并行&quot;&gt;行为并行&lt;/h3&gt;
+
+&lt;p&gt;如何在stream进行测量，多个stream中的并行呢？&lt;/p&gt;
+
+&lt;p&gt;stream也是有优先级的，设置优先级。&lt;/p&gt;
+
+&lt;h2 id=&quot;图&quot;&gt;图&lt;/h2&gt;
+
+&lt;p&gt;这个很重要，该如何理解呢？&lt;/p&gt;
+
+&lt;p&gt;图的优势：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;减少cpu launch的时间，与stream相比，因为许多操作是预先定义好的&lt;/li&gt;
+  &lt;li&gt;在GPU上实现了整个工作流程，能更好的优化，比stream阶段性的提交。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;使用图，分为三个阶段：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;定义图&lt;/li&gt;
+  &lt;li&gt;实例化图&lt;/li&gt;
+  &lt;li&gt;执行图&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;图的结构：图中一个节点表示一个操作，操作之间的依赖就是连接，这些依赖规定了操作的执行顺序。&lt;/p&gt;
+
+&lt;p&gt;节点的类型：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;kernel&lt;/li&gt;
+  &lt;li&gt;cpu function call&lt;/li&gt;
+  &lt;li&gt;memroy copy&lt;/li&gt;
+  &lt;li&gt;memset&lt;/li&gt;
+  &lt;li&gt;empty node&lt;/li&gt;
+  &lt;li&gt;child graph&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;创建图的方式：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;API&lt;/li&gt;
+  &lt;li&gt;streeam capture&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;事件&quot;&gt;事件&lt;/h3&gt;
+
+&lt;p&gt;事件的作用是什么？&lt;/p&gt;
+
+&lt;h3 id=&quot;多显卡&quot;&gt;多显卡&lt;/h3&gt;
+
+&lt;p&gt;显卡之间的访问，&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;cudaDeviceCanAccessPeer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;统一内存访问空间&quot;&gt;统一内存访问空间&lt;/h3&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;nifiedAddressing&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;进程间通信&quot;&gt;进程间通信&lt;/h3&gt;
+
+&lt;p&gt;cuda IPC&lt;/p&gt;
+
+&lt;h3 id=&quot;错误&quot;&gt;错误&lt;/h3&gt;
+
+&lt;p&gt;如何检查GPU的运行时错误？&lt;/p&gt;
+
+&lt;h1 id=&quot;硬件实现&quot;&gt;硬件实现&lt;/h1&gt;
+
+&lt;p&gt;GPU是围绕着多个SMs（Streaming Multiprocessors）来构造体系的。NVIDIA GPU架构使用小端表示。&lt;/p&gt;
+
+&lt;h3 id=&quot;simt架构&quot;&gt;&lt;strong&gt;SIMT架构&lt;/strong&gt;&lt;/h3&gt;
+
+&lt;p&gt;warp的含义是什么？32？&lt;/p&gt;
+
+&lt;p&gt;每一个block能分为多个warp来调度呢？&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;The total number of registers and total amount of shared memory allocated for a block
+are documented in the CUDA Occupancy Calculator provided in the CUDA Toolkit.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&quot;hardware-multithreading&quot;&gt;Hardware Multithreading&lt;/h3&gt;
+
+&lt;h1 id=&quot;性能准则&quot;&gt;性能准则&lt;/h1&gt;
+
+&lt;p&gt;&lt;strong&gt;三个基本策略&lt;/strong&gt;：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;最大化并行，提高最大的利用率&lt;/li&gt;
+  &lt;li&gt;优化内存，提高内存的吞吐量&lt;/li&gt;
+  &lt;li&gt;优化指令利用，提高最大的指令吞吐量&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;最大化利用率&quot;&gt;最大化利用率&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;应用层面&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;设备层面&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;通过使用stream，让设备尽可能的忙碌起来&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;SM级别&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;在这个级别中，利用率与常驻warp的数量直接相关。&lt;/p&gt;
+
+&lt;p&gt;warp尚未准备好执行其下一条指令的最常见原因是该指令的输入操作数尚不可用。&lt;/p&gt;
+
+&lt;p&gt;Warp未准备好执行下一条指令的另一个原因是它正在等待在某些内存栅栏（“内存栅栏功能”）或同步点（“内存”围栏功能）。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;给定内核的每个多处理器上存在的块和warp数调用取决于调用的执行配置（执行配置），多处理器的内存资源，以及内核的资源需求为硬件多线程中描述。 报告寄存器和共享内存使用情况使用-ptxas-options = -v选项进行编译时由编译器执行。&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;占用率计算&lt;/strong&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cudaOccupancyMaxActiveBlocksPerMultiprocessor()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Device code&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;__global__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;MyKernel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;){&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;idx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;threadIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockIdx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockDim&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;d&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// Host code&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+    
+   &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;numBlocks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Occupancy in terms of active blocks&lt;/span&gt;
+   &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockSize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;32&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;c1&quot;&gt;// These variables are used to convert occupancy to warps&lt;/span&gt;
+   &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;cudaDeviceProp&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;prop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;activeWarps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maxWarps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;cudaGetDevice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;cudaGetDeviceProperties&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;prop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;device&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;cudaOccupancyMaxActiveBlocksPerMultiprocessor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+                                                 &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;numBlocks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                                                  &lt;span class=&quot;n&quot;&gt;MyKernel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                                                  &lt;span class=&quot;n&quot;&gt;blockSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+                                                 &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;activeWarps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;numBlocks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;blockSize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;prop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;warpSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;maxWarps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;prop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;maxThreadsPerMultiProcessor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;prop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;warpSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cout&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Occupancy: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;double&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;activeWarps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maxWarps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;%&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;
+   &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;endl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+   &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;在cuda/tool/CUDA_Occupancy_Calculator.xls&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;显存访问&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;显存的访问对于warp的执行有很多的影响&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;全局显存的访问&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;32\64\128字节的对齐，对于warp中每一个线程访问全局，将会合并成一次或者多次的显存访问。&lt;/p&gt;
+
+&lt;p&gt;对于大小和对齐的要求：如果未满足此大小和对齐要求，则访问将编译为具有交错访问模式的多个指令，从而导致这些指令无法完全合并。 因此，建议对驻留在全局内存中的数据使用符合此要求的类型。&lt;/p&gt;
+
+&lt;p&gt;对于二维数据的访问，如下所示：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;BaseAddress&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ty&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul class=&quot;task-list&quot;&gt;
+  &lt;li class=&quot;task-list-item&quot;&gt;&lt;input type=&quot;checkbox&quot; class=&quot;task-list-item-checkbox&quot; disabled=&quot;disabled&quot; checked=&quot;checked&quot; /&gt;&lt;strong&gt;为了使这些访问完全合并，线程块的宽度和数组的宽度都必须是经线大小的倍数。&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;局部内存&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Also, the compiler reports total local memory usage per kernel (lmem) when compiling with the **–ptxas-options=-v **option.&lt;/p&gt;
+
+&lt;p&gt;如何在cmake中增加这个选项表示出来呢？&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;常量内存&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;最大化指令吞吐率&quot;&gt;最大化指令吞吐率&lt;/h2&gt;
+
+&lt;p&gt;在本节中，吞吐量以每个SM每个时钟周期的操作数给出。 对于32的warp大小，一个指令对应32个操作，因此，如果N是每个时钟周期的操作数，则指令吞吐量为每个时钟周期N / 32指令。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;cuobjdump can be used to inspect a particular implementation in a cubin object.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;在if\switch\do\for\while会影响到指令的吞吐率，导致线程执行分叉。最简单的方式的是用&lt;strong&gt;thread.idx/warpsize&lt;/strong&gt;来进行控制。&lt;/p&gt;
+
+&lt;p&gt;同步指令的影响&lt;/p&gt;
+
+&lt;h1 id=&quot;语言扩展&quot;&gt;语言扩展&lt;/h1&gt;
+
+&lt;p&gt;内建vector类型&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;如何使用Tensor Cores&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;–Sub-byte WMMA operations provide a way to access the low-precision capabilities of
+Tensor Cores. –&lt;/p&gt;
+
+&lt;p&gt;cuda core 和 tensor cores 的区别？&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 06 May 2020 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/cuda%E7%9A%84%E7%90%86%E8%A7%A3/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/cuda%E7%9A%84%E7%90%86%E8%A7%A3/</guid>
+        
+        
+      </item>
+    
+      <item>
+        <title>空荡荡的地球－全球人口下降的冲击</title>
+        <description>&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;关于人口的书籍&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;中世界，90%的欧洲人生活在农场，伴随工业革命，将人集中在城市中。在农场中，多一双手就是多一份投资，但是在城市，多一个孩子，多一张需要养活的嘴巴&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;多样性是发明创造的真正的母亲&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;经济不确定性是一种强有力的节育形式，这也解释什么现在很多人不愿意生孩子&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;良好的公共政策总是建立在共同的自身利益上，我们每一个人都为自己而存在&lt;/p&gt;
+
+&lt;hr /&gt;
+
+</description>
+        <pubDate>Tue, 05 May 2020 14:29:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/%E7%A9%BA%E8%8D%A1%E8%8D%A1%E7%9A%84%E5%9C%B0%E7%90%83-%E5%85%A8%E7%90%83%E4%BA%BA%E5%8F%A3%E4%B8%8B%E9%99%8D%E7%9A%84%E5%86%B2%E5%87%BB/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/%E7%A9%BA%E8%8D%A1%E8%8D%A1%E7%9A%84%E5%9C%B0%E7%90%83-%E5%85%A8%E7%90%83%E4%BA%BA%E5%8F%A3%E4%B8%8B%E9%99%8D%E7%9A%84%E5%86%B2%E5%87%BB/</guid>
+        
+        <category>社科</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>智识分子</title>
+        <description>&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;关于讨论关于如何理解现代世界的书，作者在这本书中讲了一些现代人应该有，而且只有现代人才可能有的“智识”——智慧和见识&lt;/p&gt;
+
+&lt;h1 id=&quot;文中的观点&quot;&gt;文中的观点&lt;/h1&gt;
+
+&lt;p&gt;三个趋势&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;世界越来越复杂&lt;/li&gt;
+  &lt;li&gt;人工智能正在慢慢取代人的工作&lt;/li&gt;
+  &lt;li&gt;尽管所有人的物质生活都在改善，但是整个社会阶层正在扩大&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;想要学会寻找合适的“度”，至少需要掌握两个不同的理念&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;一棵树可能很简单，但树木组成的森林非常复杂，而刺猬则以为只要他能理解树，就能解释森林&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;常识只是特别善于在事后“解释”事件，这种解释根本谈不上真正的理解&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;为了模仿而模仿，是最大不稳定因素，因为它让原本无关的人参与到事件之中，导致事态以爆炸的速度迅速扩大&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;经济智慧&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;经济学家的智慧在于问一句值不值得，哪怕这个东西在好，如果它的要价太高，那么我们应该不要，反过来说，哪怕要付出一个代价，只要换来东西的价值大，那就可以付出&lt;/li&gt;
+  &lt;li&gt;边际分析是指你不用考虑总的效果，只要考虑做下一步的临界效果就行
+    &lt;ul&gt;
+      &lt;li&gt;经济学家的经验是边际效应常常递减，可能你投入的钱越来越多，但是效果越来越不明显？&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;养成新习惯需要先做不习惯的事情&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;懂行的政客从来不给选民上经济课，专门给选民讲故事&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;国家的利益：国家作为一个抽象概念，没有自己的利益，是国家中不同人群有各自不同的利益&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;高中根本的目的不是传授知识和培养人，而是把人分类&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;自控，是一个非常基本和可贵的素质&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;现代教育分为三个阶层&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;贫民家庭对教育的期待是培养工具，以找工作为目的&lt;/li&gt;
+  &lt;li&gt;中产阶级对教育的期待是培养工艺品，以提升个人价值为目的&lt;/li&gt;
+  &lt;li&gt;上层家庭对教育的期待是培养主人翁，以欣赏、选择和改变周围世界为目的&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;资本主义的本质就是把人变成工具，不是资本主义，是工业化时代生产分工的本质&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;数据分析的真正作用是能让好东西迅速流传开来，然后迅速灭亡&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;技术不仅仅对人类生活提供辅助性的帮助，直接改变人类的行为模式和社会制度，技术发展的大势决定天下大势&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;互联网是进攻武器还是防守武器？&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;信息极客的三个功夫&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;阅读学术论文&lt;/li&gt;
+  &lt;li&gt;直接阅读原始数据&lt;/li&gt;
+  &lt;li&gt;主动采集和分析数据&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
 
 &lt;h1 id=&quot;结论&quot;&gt;结论&lt;/h1&gt;
-&lt;p&gt;从Logmessage类的继承组合来说，跟iostream中的继承和组合类似，这就是C++ I/O中输出。下图给出了一张图，也许更能说明问题。&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;http://images.cnblogs.com/cnblogs_com/Solstice/201107/201107171508102461.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;知识本身不在值钱，但是不值钱不代表不重要，就像空气一样，不值钱但是很重要&lt;/p&gt;
 </description>
-        <pubDate>Sat, 10 Sep 2016 15:40:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81-2/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81-2/</guid>
+        <pubDate>Tue, 05 May 2020 14:29:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/%E6%99%BA%E8%AF%86%E5%88%86%E5%AD%90/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/%E6%99%BA%E8%AF%86%E5%88%86%E5%AD%90/</guid>
         
-        <category>c++</category>
-        
-        <category>glog</category>
+        <category>社科</category>
         
         
       </item>
     
       <item>
-        <title>glog源码（1）</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
+        <title>极简GPB历史</title>
+        <description>&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
 
-&lt;p&gt;[07:24 PM]&lt;/p&gt;
+&lt;p&gt;介绍GDP历史&lt;/p&gt;
 
-&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
-&lt;p&gt;glog是一个应用级别的日记系统，使用非常方便，重要的代码行为8K，下面仅仅是记录自己看glog源码时候的一些关键点。
-&lt;a href=&quot;https://github.com/google/glog&quot;&gt;glog链接&lt;/a&gt;&lt;/p&gt;
-
-&lt;h1 id=&quot;流程&quot;&gt;流程&lt;/h1&gt;
-&lt;p&gt;&lt;strong&gt;若是设计一个日记系统，需要考虑的点有哪些？&lt;/strong&gt;&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;1.系统中当前仅当有一个日记输出，也就是说，日记的输出是顺序&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;2.输出的消息格式，以及等级&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;3.输出的日记文件，以及文件的组织&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;流程如图：&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;http://img.blog.csdn.net/20160908194848945&quot; alt=&quot;liucheng Image&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;其中LogMessage类是用于组织消息内容，而LogDestination是用于组织消息的载体–文件的组织&lt;/strong&gt;，其中所谓的消息流就是通过这样写入到磁盘中的，当然
-其中代码中有很多的技巧之处。&lt;/p&gt;
-
-&lt;p&gt;在实际使用中，在代码中一般用glog所定义的宏进行消息的输出，如下图：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;if(count &amp;lt; 5 ){
-    LOG(INFO) &amp;lt;&amp;lt; &quot;less 5&quot;;
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;输出的日记文件在：（linux）/tmp，类似&lt;em&gt;example.bin.username-MS-$$.test.log.INFO.20160908-141658.6235&lt;/em&gt;这种，
-（window）则是在用户/appdata/tmp/。当然这个的前提是没有设置glog的输出目录，而仅仅使用默认的。&lt;/p&gt;
-
-&lt;h2 id=&quot;log宏&quot;&gt;LOG（）宏&lt;/h2&gt;
-
-&lt;p&gt;glog使用宏作为日记输出，这对于应用人员来说是非常方便，并且其也定义了相应的等级，根据宏的拼接，来生成LogMessage，如下图&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;http://img.blog.csdn.net/20160908200332370&quot; alt=&quot;hong Image&quot; /&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;组织消息的类&quot;&gt;组织消息的类&lt;/h2&gt;
-&lt;p&gt;关于消息的各个类，如下图所见，但是其中图与代码并不是一一对应，缺少一些小的细节，但是大体上是能反应关系的，其中用于&lt;strong&gt;C++的流的概念&lt;/strong&gt;。
-&lt;img src=&quot;http://img.blog.csdn.net/20160908201239180&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;组织日记文件的类&quot;&gt;组织日记文件的类&lt;/h2&gt;
-
-&lt;p&gt;这个是用于组织日记文件的类，具体的成员变量和成员函数没有给出。
-&lt;img src=&quot;http://img.blog.csdn.net/20160910145818439&quot; alt=&quot;destion&quot; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
-</description>
-        <pubDate>Thu, 08 Sep 2016 19:24:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81(1)/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/09/glog%E6%BA%90%E7%A0%81(1)/</guid>
-        
-        <category>c++</category>
-        
-        <category>glog</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>C++错误思考(4)</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
-
-&lt;p&gt;[11:11 PM PM]&lt;/p&gt;
-
-&lt;h1 id=&quot;前言&quot;&gt;前言&lt;/h1&gt;
-&lt;p&gt;C++是一个静态类别的语音，也就是说在编译的时候，会对其类型进行检查。但是C++又是一个灵活性极高的语言，因此就是
-出现&lt;strong&gt;破坏静态类型安全的编码&lt;/strong&gt;。&lt;/p&gt;
-
-&lt;h1 id=&quot;第一种情况以void-为主导&quot;&gt;第一种情况：以void *为主导&lt;/h1&gt;
-&lt;p&gt;在强制类型转换中，转换到void *类型的结果会将类型的指针的类型信息都会抹除。同时，存在的情况是，基类与派生类之间的转换。
-在《探索C++内存模型》中说道基类与派生类之间的内存模型。如下：&lt;/p&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th style=&quot;text-align: left&quot;&gt; &lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;基类class子对象&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;派生类成员&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;当然这是在单继承情况下。若是多继承呢？ &lt;em&gt;在多继承条件下，单一对象往往有多个合法地址&lt;/em&gt;&lt;/p&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th style=&quot;text-align: left&quot;&gt; &lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;基类subject类型的子对象&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;基类button类型的子对象&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;派生类成员&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;在接口中使用void *作为类型转换的中介类型，并要求用户在调用接口中的某一个函数时重新提供另一个函数抹除的类型信息，
-这终究不是办法&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;h1 id=&quot;第二种-截断问题&quot;&gt;第二种 截断问题&lt;/h1&gt;
-
-&lt;p&gt;发生的时机：&lt;em&gt;企图把一个派生类对象的内容复制到另一个基类对象的存储的时刻&lt;/em&gt;
-发生的后果：&lt;em&gt;那些派生类型专属的成员数据和成员函数会被截断&lt;/em&gt;。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;class Employee{
-public:
-    vitual ~Employee();
-    vitual void pay() const;
-protect:
-    void setType( int type){
-        myType_ = type;
-    }
-private:
-    int myType_ ; //不好的的用法
-};
-
-calss Salaried:public Employee{
-    //...
-};
-
-Employee employee;
-Salaried salaried;
-employee = salaried; //发生什么，截断了
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;&lt;em&gt;Salaried 类型信息完全被隔离，虚函数表中根本没有放入Salaried类型所指定对应函数入口地址&lt;/em&gt;&lt;/p&gt;
-
-&lt;p&gt;这里也提出一个问题：在设计的时候，要保证截断情况保持赋值结果的状态的合法性。&lt;/p&gt;
-
-&lt;hr /&gt;
-&lt;p&gt;截断问题的最常见来源，是一个派生类的class类对象被以传值方式传递给一个基类的形参&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;void fire( Employee victim);
-fire(salaried); //被截断
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;&lt;strong&gt;解决方法：传递引用或指针&lt;/strong&gt;
-—-&lt;/p&gt;
-
-&lt;hr /&gt;
-&lt;hr /&gt;
-
-&lt;h1 id=&quot;赋值和初始化&quot;&gt;赋值和初始化&lt;/h1&gt;
-&lt;p&gt;&lt;strong&gt;初始化：把一段新鲜存储（raw storage）变成一个对象的过程，对于一个class对象来说，这会涵盖搭建一系列内部机能，以
-支持虚函数和虚基类、运行时类别信息以及其他类别相依的信息&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;赋值 是一个有着合适定义对象的某种状态上所作的一个变化，使该对象处于一个新的状态，赋值操作不会实现对象的类型相依的
-行为背后的内部机能&lt;/strong&gt;&lt;/p&gt;
-
-&lt;p&gt;复制构造和复制赋值的区别，（浅层复制 和 深层赋值）&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-struct X{
-    int *t_;
-    X &amp;amp;operator = (const X &amp;amp;rhs){
-        if( this != &amp;amp;rhs ){
-            delete t_; //！删除一段未定义的内存，作死～～～
-            t_ = new int(*rhs.t_);
-        }
-        return  *this;
-    }
-};
-
-
-int main() {
-    X x;
-    X *buf = (X *)malloc(sizeof(X)); // 申请内存，初始化了吗？
-    X &amp;amp;rx = *buf;
-    rx = x;  //！出现段错误
-    return 0;
-}
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-</description>
-        <pubDate>Wed, 07 Sep 2016 23:15:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/09/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/09/C++%E9%94%99%E8%AF%AF%E6%80%9D%E8%80%83(4)/</guid>
-        
-        <category>C++</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>Ramme Jekyll Theme</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;http://localhost:4000/&quot; alt=&quot;Logo&quot; class=&quot;selfie&quot; /&gt;&lt;/p&gt;
-
-&lt;center&gt;&lt;b&gt;Ramme&lt;/b&gt; is a simple jekyll theme.&lt;/center&gt;
-
-&lt;h2 id=&quot;about&quot;&gt;About&lt;/h2&gt;
-
-&lt;p&gt;I made this theme after seeing this &lt;a href=&quot;http://spoonm.org/share/rice/01.png&quot;&gt;screenshot&lt;/a&gt;. I took some parts from @mmistakes, like TOC, sample posts. I never tought making a theme from scratch would be this hard. And it’s still WIP.&lt;/p&gt;
-
-&lt;p&gt;I’m not a designer or something, so I’m sure there is a better way to make this theme. But it’s working and looks acceptable for different screen sizes. If something looks extremely ugly and you can’t resist to fix it, just send me a PR. I will be grateful.&lt;/p&gt;
-
-&lt;p&gt;I see some people using this theme. I need to search on Github to find who use it. But I don’t want to search like this. If you like this theme or using it, please give a &lt;strong&gt;star&lt;/strong&gt; for motivation.&lt;/p&gt;
-
-&lt;iframe src=&quot;https://ghbtns.com/github-btn.html?user=TaylanTatli&amp;amp;repo=Ramme&amp;amp;type=star&amp;amp;count=true&amp;amp;size=large&quot; frameborder=&quot;0&quot; scrolling=&quot;0&quot; width=&quot;160px&quot; height=&quot;30px&quot;&gt;&lt;/iframe&gt;
-
-&lt;h2 id=&quot;installation&quot;&gt;Installation&lt;/h2&gt;
-&lt;ul&gt;
-  &lt;li&gt;Fork the &lt;a href=&quot;https://github.com/TaylanTatli/Ramme/fork&quot;&gt;Repo&lt;/a&gt;&lt;/li&gt;
-  &lt;li&gt;Edit &lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt; file.&lt;/li&gt;
-  &lt;li&gt;Remove sample posts from &lt;code class=&quot;highlighter-rouge&quot;&gt;_posts&lt;/code&gt; folder and add yours.&lt;/li&gt;
-  &lt;li&gt;Edit &lt;code class=&quot;highlighter-rouge&quot;&gt;index.md&lt;/code&gt; file in &lt;code class=&quot;highlighter-rouge&quot;&gt;about&lt;/code&gt; folder.&lt;/li&gt;
-  &lt;li&gt;Change repo name to &lt;code class=&quot;highlighter-rouge&quot;&gt;YourUserName.github.io&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;That’s all.&lt;/p&gt;
-
-&lt;h2 id=&quot;scaffolding&quot;&gt;Scaffolding&lt;/h2&gt;
-&lt;p&gt;How Ramme is organized and what the various files are. All posts, layouts, includes, stylesheets, assets, and whatever else is grouped nicely under the root folder.&lt;/p&gt;
-
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;├── 404.html                                    # 404 page
-├── about                                       # About Page
-├── assets
-│   ├── css                                     # Compiled stylesheets
-│   ├── fonts                                   # webfonts
-│   ├── img                                     # Folder for images
-│   │   ├── favicon                             # Folder for favicons
-│   └── js                                      # Folder for scripts
-├── blog                                        # Post list for blog
-├── _config.yml                                 # Configuration file for jekyll
-├── _data
-│   └── navigation.yml                          # Navigation links
-├── _includes
-│   ├── favicon.html                            # Favicon links
-│   ├── footer-home.html                        # Footer for home page
-│   ├── footer.html                             # Footer for other pages
-│   ├── head-home.html                          # Head for home page
-│   ├── head.html                               # Head for other pages
-│   ├── nav-home.html                           # Top navigation for home page
-│   ├── nav.html                                # Top navigation for other pages
-│   ├── open-graph.html                         # Twitter Cards and Open Graph meta data
-│   ├── scripts.html                            # Site scripts
-│   ├── social-links.html                       # Social links to show in homepage
-│   └── toc.html                                # Table of contents to use in some posts
-├── index.html                                  # Homepage
-├── _layouts
-│   ├── home.html                               # Home layout
-│   ├── page.html                               # Page layout
-│   ├── post.html                               # Post layout
-│   ├── post-index.html                         # Post list layout
-│   └── project.html                            # Project list layout
-├── _posts                                      # MarkDown formatted posts
-├── _sass                                       # Sass stylesheets
-└── projects                                    # Projects list page&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;site-setup&quot;&gt;Site Setup&lt;/h2&gt;
-&lt;p&gt;A quick checklist of the files you’ll want to edit to get up and running.&lt;/p&gt;
-
-&lt;h3 id=&quot;site-wide-configuration&quot;&gt;Site Wide Configuration&lt;/h3&gt;
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt; is your friend. Open it up and personalize it. Most variables are self explanatory but here’s an explanation of each if needed:&lt;/p&gt;
-
-&lt;h4 id=&quot;title&quot;&gt;title&lt;/h4&gt;
-
-&lt;p&gt;The title of your site… shocker!&lt;/p&gt;
-
-&lt;p&gt;Example &lt;code class=&quot;highlighter-rouge&quot;&gt;title: My Awesome Site&lt;/code&gt;&lt;/p&gt;
-
-&lt;h4 id=&quot;url&quot;&gt;url&lt;/h4&gt;
-
-&lt;p&gt;Used to generate absolute urls in &lt;code class=&quot;highlighter-rouge&quot;&gt;sitemap.xml&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;feed.xml&lt;/code&gt;, and for generating canonical URLs in &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;head&amp;gt;&lt;/code&gt;. When developing locally either comment this out or use something like &lt;code class=&quot;highlighter-rouge&quot;&gt;http://localhost:4000&lt;/code&gt; so all assets load properly. &lt;em&gt;Don’t include a trailing &lt;code class=&quot;highlighter-rouge&quot;&gt;/&lt;/code&gt;&lt;/em&gt;.&lt;/p&gt;
-
-&lt;p&gt;Examples:&lt;/p&gt;
-
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://taylantatli.me/Ramme&lt;/span&gt;
-&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://localhost:4000&lt;/span&gt;
-&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;//cooldude.github.io&lt;/span&gt;
-&lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
-
-&lt;h4 id=&quot;google-analytics-and-webmaster-tools&quot;&gt;Google Analytics and Webmaster Tools&lt;/h4&gt;
-
-&lt;p&gt;Google Analytics UA and Webmaster Tool verification tags can be entered in &lt;code class=&quot;highlighter-rouge&quot;&gt;_config.yml&lt;/code&gt;. For more information on obtaining these meta tags check &lt;a href=&quot;http://support.google.com/webmasters/bin/answer.py?hl=en&amp;amp;answer=35179&quot;&gt;Google Webmaster Tools&lt;/a&gt; and &lt;a href=&quot;https://ssl.bing.com/webmaster/configure/verify/ownership&quot;&gt;Bing Webmaster Tools&lt;/a&gt; support.&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;h3 id=&quot;navigation-links&quot;&gt;Navigation Links&lt;/h3&gt;
-
-&lt;p&gt;To set what links appear in the top navigation edit &lt;code class=&quot;highlighter-rouge&quot;&gt;_data/navigation.yml&lt;/code&gt;. Use the following format to set the URL and title for as many links as you’d like. &lt;em&gt;External links will open in a new window.&lt;/em&gt;&lt;/p&gt;
-
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Home&lt;/span&gt;
-  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/&lt;/span&gt;
-
-&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Blog&lt;/span&gt;
-  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/blog/&lt;/span&gt;
-
-&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Projects&lt;/span&gt;
-  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/projects/&lt;/span&gt;
-
-&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;About&lt;/span&gt;
-  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/about/&lt;/span&gt;
-
-&lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Ramme&lt;/span&gt;
-  &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;http://taylantatli.me/Ramme&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;layouts-and-content&quot;&gt;Layouts and Content&lt;/h2&gt;
-
-&lt;p&gt;Explanations of the various &lt;code class=&quot;highlighter-rouge&quot;&gt;_layouts&lt;/code&gt; included with the theme and when to use them.&lt;/p&gt;
-
-&lt;h3 id=&quot;post-and-page&quot;&gt;Post and Page&lt;/h3&gt;
-
-&lt;p&gt;These two layouts are almost similar. Only difference is page layout doesn’t show date under title.&lt;/p&gt;
-
-&lt;h3 id=&quot;post-index-page&quot;&gt;Post Index Page&lt;/h3&gt;
-
-&lt;p&gt;A &lt;a href=&quot;http://localhost:4000/blog/&quot;&gt;sample index page&lt;/a&gt; listing all blog posts. The name can be customized to your liking by editing a few references. For example, to change &lt;strong&gt;Blog&lt;/strong&gt; to &lt;strong&gt;Posts&lt;/strong&gt; update the following:&lt;/p&gt;
+&lt;h1 id=&quot;许多最终在民用领域发扬光大的新技术最初都是为了满足作战需求而研发的&quot;&gt;许多最终在民用领域发扬光大的新技术，最初都是为了满足作战需求而研发的&lt;/h1&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;In &lt;code class=&quot;highlighter-rouge&quot;&gt;_data/navigation.yml&lt;/code&gt;: rename the title and URL to the following:&lt;/li&gt;
+  &lt;li&gt;GDP是第二次世界大战众多发明之一&lt;/li&gt;
+  &lt;li&gt;GDP被设计出来的目的
+    &lt;ul&gt;
+      &lt;li&gt;衡量在物资稀缺的情况下，经济中物质资源的使用情况和可获得性，尽管情况错综复杂，但对物质产品的测量还是非常简单、明确的&lt;/li&gt;
+      &lt;li&gt;GDP现在不是，过去也从来没有打算要成为衡量福利的标准，它衡量的是生产&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;  &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;Posts&lt;/span&gt;
-    &lt;span class=&quot;na&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/posts/&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+&lt;p&gt;生活中经常出现的那样，失败的种子往往扎根于成功的本质中。&lt;/p&gt;
+
+&lt;h1 id=&quot;只有在收入远高于食物住房和衣物支出时候人们才能超越谋生的艰辛去关心别的事情&quot;&gt;只有在收入远高于食物、住房和衣物支出时候，人们才能超越谋生的艰辛，去关心别的事情&lt;/h1&gt;
+
+&lt;h1 id=&quot;希腊悲剧三大元素&quot;&gt;希腊悲剧三大元素&lt;/h1&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;Rename &lt;code class=&quot;highlighter-rouge&quot;&gt;blog/index.md&lt;/code&gt; to &lt;code class=&quot;highlighter-rouge&quot;&gt;posts/index.md&lt;/code&gt; and update the YAML front matter accordingly.&lt;/li&gt;
+  &lt;li&gt;傲慢&lt;/li&gt;
+  &lt;li&gt;愚蠢&lt;/li&gt;
+  &lt;li&gt;毁灭&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&quot;thumbnails-for-og-and-twitter-cards&quot;&gt;Thumbnails for OG and Twitter Cards&lt;/h3&gt;
+&lt;h1 id=&quot;中国同时面临的问题&quot;&gt;中国同时面临的问题&lt;/h1&gt;
 
-&lt;p&gt;Site logo is used by &lt;a href=&quot;https://developers.facebook.com/docs/opengraph/&quot;&gt;Open Graph&lt;/a&gt; and &lt;a href=&quot;https://dev.twitter.com/docs/cards&quot;&gt;Twitter Cards&lt;/a&gt;.&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;人口快速老化&lt;/li&gt;
+  &lt;li&gt;男性人口过剩&lt;/li&gt;
+  &lt;li&gt;福利和养老的缺乏&lt;/li&gt;
+  &lt;li&gt;房地产的泡沫&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p class=&quot;notice&quot;&gt;&lt;strong&gt;Pro-Tip&lt;/strong&gt;: You need to &lt;a href=&quot;https://dev.twitter.com/docs/cards&quot;&gt;apply for Twitter Cards&lt;/a&gt; before they will begin showing up when links to your site are shared.&lt;/p&gt;
+&lt;h1 id=&quot;消费主义会让人上瘾&quot;&gt;消费主义会让人上瘾&lt;/h1&gt;
 
-&lt;h3 id=&quot;kramdown-table-of-contents&quot;&gt;Kramdown Table of Contents&lt;/h3&gt;
-
-&lt;p&gt;To include an auto-generated &lt;strong&gt;table of contents&lt;/strong&gt; for posts and pages, add the following &lt;code class=&quot;highlighter-rouge&quot;&gt;_include&lt;/code&gt; before the actual content. &lt;a href=&quot;http://kramdown.rubyforge.org/converter/html.html#toc&quot;&gt;Kramdown will take care of the rest&lt;/a&gt; and convert all headlines into list of links.&lt;/p&gt;
-
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;listi&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;questions&quot;&gt;Questions?&lt;/h2&gt;
-
-&lt;p&gt;Found a bug or aren’t quite sure how something works? By all means &lt;a href=&quot;https://github.com/TaylanTatli/Ramme/issues/new&quot;&gt;file a GitHub Issue&lt;/a&gt;. And if you make something cool with this theme feel free to let me know.&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;h2 id=&quot;license&quot;&gt;License&lt;/h2&gt;
-
-&lt;p&gt;This theme is free and open source software, distributed under the MIT License. So feel free to use this Jekyll theme on your site without linking back to me or including a disclaimer.&lt;/p&gt;
+&lt;p&gt;大多数人对地位以及相对收入的关心超过对绝对收入水平的关心&lt;/p&gt;
 </description>
-        <pubDate>Mon, 21 Mar 2016 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/03/ramme-theme/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/03/ramme-theme/</guid>
+        <pubDate>Tue, 05 May 2020 14:12:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/%E6%9E%81%E7%AE%80GPB%E5%8E%86%E5%8F%B2/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/%E6%9E%81%E7%AE%80GPB%E5%8E%86%E5%8F%B2/</guid>
         
-        <category>jekyll</category>
-        
-        <category>ramme</category>
-        
-        <category>blog</category>
-        
-        <category>about</category>
-        
-        <category>theme</category>
+        <category>经济-科普</category>
         
         
       </item>
     
       <item>
-        <title>Markdown Syntax</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
+        <title>一件T恤的全球经济之旅</title>
+        <description>&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
 
-&lt;h2 id=&quot;html-elements&quot;&gt;HTML Elements&lt;/h2&gt;
+&lt;p&gt;这是从T恤的角度来描述经济的&lt;/p&gt;
 
-&lt;p&gt;Below is just about everything you’ll need to style in the theme. Check the source code to see the many embedded elements within paragraphs.&lt;/p&gt;
+&lt;h1 id=&quot;国际贸易流动的背后是消费的需求&quot;&gt;国际贸易流动的背后，是消费的需求&lt;/h1&gt;
 
-&lt;h1 id=&quot;heading-1&quot;&gt;Heading 1&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;想要了解经济史上某一个事件在某一个地点和时间为何发生或为何没有发生的最有效的方法就是想想谁是受益者&lt;/strong&gt;&lt;/p&gt;
 
-&lt;h2 id=&quot;heading-2&quot;&gt;Heading 2&lt;/h2&gt;
-
-&lt;h3 id=&quot;heading-3&quot;&gt;Heading 3&lt;/h3&gt;
-
-&lt;h4 id=&quot;heading-4&quot;&gt;Heading 4&lt;/h4&gt;
-
-&lt;h5 id=&quot;heading-5&quot;&gt;Heading 5&lt;/h5&gt;
-
-&lt;h6 id=&quot;heading-6&quot;&gt;Heading 6&lt;/h6&gt;
-
-&lt;h3 id=&quot;body-text&quot;&gt;Body text&lt;/h3&gt;
-
-&lt;p&gt;Lorem ipsum dolor sit amet, test link adipiscing elit. &lt;strong&gt;This is strong&lt;/strong&gt;. Nullam dignissim convallis est. Quisque aliquam.&lt;/p&gt;
-
-&lt;p class=&quot;image-pull-right&quot;&gt;&lt;img src=&quot;https://mmistakes.github.io/minimal-mistakes/images/3953273590_704e3899d5_m.jpg&quot; alt=&quot;Smithsonian Image&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;em&gt;This is emphasized&lt;/em&gt;. Donec faucibus. Nunc iaculis suscipit dui. 53 = 125. Water is H2O. Nam sit amet sem. Aliquam libero nisi, imperdiet at, tincidunt nec, gravida vehicula, nisl. The New York Times (That’s a citation). Underline.Maecenas ornare tortor. Donec sed tellus eget sapien fringilla nonummy. Mauris a ante. Suspendisse quam sem, consequat at, commodo vitae, feugiat in, nunc. Morbi imperdiet augue quis tellus.&lt;/p&gt;
-
-&lt;p&gt;HTML and CSS are our tools. Mauris a ante. Suspendisse quam sem, consequat at, commodo vitae, feugiat in, nunc. Morbi imperdiet augue quis tellus. Praesent mattis, massa quis luctus fermentum, turpis mi volutpat justo, eu volutpat enim diam eget metus.&lt;/p&gt;
-
-&lt;h3 id=&quot;blockquotes&quot;&gt;Blockquotes&lt;/h3&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;Lorem ipsum dolor sit amet, test link adipiscing elit. Nullam dignissim convallis est. Quisque aliquam.&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;h2 id=&quot;list-types&quot;&gt;List Types&lt;/h2&gt;
-
-&lt;h3 id=&quot;ordered-lists&quot;&gt;Ordered Lists&lt;/h3&gt;
+&lt;h1 id=&quot;美国种植园&quot;&gt;美国种植园&lt;/h1&gt;
 
 &lt;ol&gt;
-  &lt;li&gt;Item one
-    &lt;ol&gt;
-      &lt;li&gt;sub item one&lt;/li&gt;
-      &lt;li&gt;sub item two&lt;/li&gt;
-      &lt;li&gt;sub item three&lt;/li&gt;
-    &lt;/ol&gt;
-  &lt;/li&gt;
-  &lt;li&gt;Item two&lt;/li&gt;
+  &lt;li&gt;通过奴隶制度，避开劳动市场风险&lt;/li&gt;
+  &lt;li&gt;财产权、激励措施（管理）是必要体系&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&quot;unordered-lists&quot;&gt;Unordered Lists&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;从环保的角度来看，能杀死植物的物质肯定不可能对咱们有益处&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;棉花的进步&quot;&gt;棉花的进步&lt;/h1&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;机械&lt;/li&gt;
+  &lt;li&gt;化学药品&lt;/li&gt;
+  &lt;li&gt;转基因技术&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;strong&gt;直觉告诉咱们廉价劳动力是一种优势，劳动力成本在人们别无选择的时候才会变得廉价&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;旅行者为当今世界各地的逐步同化感到惋惜&lt;/p&gt;
+
+&lt;h1 id=&quot;惯性的原因&quot;&gt;惯性的原因&lt;/h1&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;没有其他选择&lt;/li&gt;
+  &lt;li&gt;缺乏经验&lt;/li&gt;
+  &lt;li&gt;视野有限&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;结论&quot;&gt;结论&lt;/h1&gt;
+
+&lt;p&gt;最好的经济政策并不有利于成就最佳的政治，同理，可证。&lt;/p&gt;
+</description>
+        <pubDate>Tue, 05 May 2020 14:12:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/%E4%B8%80%E4%BB%B6T%E6%81%A4%E7%9A%84%E5%85%A8%E7%90%83%E7%BB%8F%E6%B5%8E%E4%B9%8B%E6%97%85/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/%E4%B8%80%E4%BB%B6T%E6%81%A4%E7%9A%84%E5%85%A8%E7%90%83%E7%BB%8F%E6%B5%8E%E4%B9%8B%E6%97%85/</guid>
+        
+        <category>经济-科普</category>
+        
+        
+      </item>
+    
+      <item>
+        <title>从骰子到阿尔法狗-趣谈概率</title>
+        <description>&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
+
+&lt;p&gt;这本书是关于概率的，这其中关于信息量的统计是非常精彩的&lt;/p&gt;
+
+&lt;h1 id=&quot;概率论本来就是从多个赌博游戏中滋生中&quot;&gt;概率论本来就是从多个赌博游戏中滋生中&lt;/h1&gt;
+
+&lt;h1 id=&quot;墨菲定律&quot;&gt;墨菲定律&lt;/h1&gt;
+
+&lt;p&gt;含义：凡事有可能会出错的，就一定会出错&lt;/p&gt;
+
+&lt;p&gt;从下面的原因去理解：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;如果暂时没有出错，也只是时间的问题&lt;/li&gt;
+  &lt;li&gt;大数定理体现类似的意思，当实验次数足够多时，事件发生的频率就是趋向它的概率&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;两种派别&quot;&gt;两种派别&lt;/h1&gt;
 
 &lt;ul&gt;
-  &lt;li&gt;Item one&lt;/li&gt;
-  &lt;li&gt;Item two&lt;/li&gt;
-  &lt;li&gt;Item three&lt;/li&gt;
+  &lt;li&gt;频率学派
+    &lt;ul&gt;
+      &lt;li&gt;描述的是事物本体&lt;/li&gt;
+      &lt;li&gt;把模型参数看成是固定&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;贝叶斯学派
+    &lt;ul&gt;
+      &lt;li&gt;描述的是观察者知识状态在新的观测发生后如何更新&lt;/li&gt;
+      &lt;li&gt;通过新得到的证据不断更新你的信念，你能根据新的知识做出可信的判断，总会保留一定的不确定性&lt;/li&gt;
+      &lt;li&gt;参数也看成随机变量，也符合某种分布&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&quot;tables&quot;&gt;Tables&lt;/h2&gt;
+&lt;h1 id=&quot;熵&quot;&gt;熵&lt;/h1&gt;
 
-&lt;table rules=&quot;groups&quot;&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th style=&quot;text-align: left&quot;&gt;Header1&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;Header2&lt;/th&gt;
-      &lt;th style=&quot;text-align: right&quot;&gt;Header3&lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;cell1&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;cell2&lt;/td&gt;
-      &lt;td style=&quot;text-align: right&quot;&gt;cell3&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;cell4&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;cell5&lt;/td&gt;
-      &lt;td style=&quot;text-align: right&quot;&gt;cell6&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;cell1&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;cell2&lt;/td&gt;
-      &lt;td style=&quot;text-align: right&quot;&gt;cell3&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;cell4&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;cell5&lt;/td&gt;
-      &lt;td style=&quot;text-align: right&quot;&gt;cell6&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-  &lt;tfoot&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: left&quot;&gt;Foot1&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Foot2&lt;/td&gt;
-      &lt;td style=&quot;text-align: right&quot;&gt;Foot3&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tfoot&gt;
-&lt;/table&gt;
+&lt;ul&gt;
+  &lt;li&gt;熵只增不减，熵的增加意味着系统中的能量不断地贬值&lt;/li&gt;
+  &lt;li&gt;熵最大就是事物可能的状态数最多，复杂程度最大&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;h2 id=&quot;code-snippets&quot;&gt;Code Snippets&lt;/h2&gt;
+&lt;h1 id=&quot;信息量的统计&quot;&gt;信息量的统计&lt;/h1&gt;
 
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-css&quot; data-lang=&quot;css&quot;&gt;&lt;span class=&quot;nf&quot;&gt;#container&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-  &lt;span class=&quot;nl&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;left&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-  &lt;span class=&quot;nl&quot;&gt;margin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;-240px&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-  &lt;span class=&quot;nl&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100%&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+&lt;p&gt;&lt;strong&gt;英文和汉字&lt;/strong&gt;&lt;/p&gt;
 
-&lt;h2 id=&quot;buttons&quot;&gt;Buttons&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;英文有26个字母，每一个字母出现的概率相等，信息量=-log(1/26) = 4.7.比特&lt;/li&gt;
+  &lt;li&gt;汉字有2500个常用字，信息量=-log(1/2500)=11.3比特&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;Make any link standout more when applying the &lt;code class=&quot;highlighter-rouge&quot;&gt;.btn&lt;/code&gt; class.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;所以一个汉字含有的信息比一个字母多的，也就是说很多的时候，一本英文书籍翻译成中文，它的页数变少&lt;/strong&gt;&lt;/p&gt;
 
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;a&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;href=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;#&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;btn btn-success&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Success Button&lt;span class=&quot;nt&quot;&gt;&amp;lt;/a&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
-
-&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn&quot;&gt;Primary Button&lt;/a&gt;&lt;/div&gt;
-&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-success&quot;&gt;Success Button&lt;/a&gt;&lt;/div&gt;
-&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-warning&quot;&gt;Warning Button&lt;/a&gt;&lt;/div&gt;
-&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-danger&quot;&gt;Danger Button&lt;/a&gt;&lt;/div&gt;
-&lt;div&gt;&lt;a href=&quot;#&quot; class=&quot;btn btn-info&quot;&gt;Info Button&lt;/a&gt;&lt;/div&gt;
-
-&lt;h2 id=&quot;notices&quot;&gt;Notices&lt;/h2&gt;
-
-&lt;p class=&quot;notice&quot;&gt;&lt;strong&gt;Watch out!&lt;/strong&gt; You can also add notices by appending &lt;code class=&quot;highlighter-rouge&quot;&gt;{: .notice}&lt;/code&gt; to a paragraph.&lt;/p&gt;
 </description>
-        <pubDate>Tue, 15 Mar 2016 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/03/markdown-syntax/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/03/markdown-syntax/</guid>
+        <pubDate>Tue, 05 May 2020 13:57:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/%E4%BB%8E%E9%AA%B0%E5%AD%90%E5%88%B0%E9%98%BF%E5%B0%94%E6%B3%95%E7%8B%97-%E8%B6%A3%E8%B0%88%E6%A6%82%E7%8E%87/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/%E4%BB%8E%E9%AA%B0%E5%AD%90%E5%88%B0%E9%98%BF%E5%B0%94%E6%B3%95%E7%8B%97-%E8%B6%A3%E8%B0%88%E6%A6%82%E7%8E%87/</guid>
         
-        <category>markdown</category>
-        
-        <category>syntax</category>
-        
-        <category>sample</category>
-        
-        <category>test</category>
-        
-        <category>jekyll</category>
+        <category>数学-科普</category>
         
         
       </item>
     
       <item>
-        <title>套接字编程简介（笔记）</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
+        <title>给投资新手的极简股票课</title>
+        <description>&lt;h1 id=&quot;简介&quot;&gt;简介&lt;/h1&gt;
 
-&lt;p&gt;[8:26 PM]&lt;/p&gt;
+&lt;p&gt;这是看的一本书，做的一些笔记&lt;/p&gt;
 
-&lt;h2 id=&quot;前言&quot;&gt;前言&lt;/h2&gt;
+&lt;h1 id=&quot;有钱的一个重要指标&quot;&gt;有钱的一个重要指标&lt;/h1&gt;
 
-&lt;p&gt;网络编程-&amp;gt;套接字-&amp;gt;套接字地址结构。
-套接字地址结构可以在两个方向上传递：从进程到内核、从内核到进程！&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;被动收入&lt;/li&gt;
+  &lt;li&gt;变富的过程，就是被动收入占比逐渐升高的过程&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;h2 id=&quot;套接字结构&quot;&gt;套接字结构&lt;/h2&gt;
+&lt;h1 id=&quot;平凡的人&quot;&gt;平凡的人&lt;/h1&gt;
 
-&lt;p&gt;以Windows作为实例，看看套接字的结构：&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;安于现状，永远依赖工资收入&lt;/li&gt;
+  &lt;li&gt;陷入怪圈，不管赚多少钱都不够用&lt;/li&gt;
+  &lt;li&gt;根本没有幻想中的救世主&lt;/li&gt;
+  &lt;li&gt;没有给子女留下任何遗产，甚至将压抑的人生传给下一代&lt;/li&gt;
+  &lt;li&gt;唯一可复制的致富渠道：善用复利的力量&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/*
- * Socket address, internet style.
- */
-struct sockaddr_in {
-        short   sin_family;
-        u_short sin_port;
-        struct  in_addr sin_addr;
-        char    sin_zero[8];
-};
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;&lt;strong&gt;注意：&lt;/strong&gt;
-套接字地址结构仅在给定主机上使用，虽然结构中的某些字段（例如IP地址和端口号）用在不用主机之间的通信中，但是结构本身并不在主机之间传递！&lt;/p&gt;
+&lt;h1 id=&quot;远离群体单独行动是违背我们的天性&quot;&gt;远离群体单独行动是违背我们的天性&lt;/h1&gt;
 
-&lt;p&gt;**当作为一个参数传递进任何套接字函数时，套接字地址结构总是以引用形式（也就是以指向该结构的指针）来传递，然而以这样的指针作为参数之一的任何套接字函数必须处理来自所支持的任何协议族的套接字地址结构
-在如何声明所传递指针的数据类型上存在一个问题？
-解决的方法：定义一个通用的套接字数据结构！&lt;/p&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Ret = bind(ServerSocket, (struct sockaddr*)&amp;amp;LocalAddr, sizeof(LocalAddr));
-```**
+&lt;h1 id=&quot;投机渠道&quot;&gt;投机渠道&lt;/h1&gt;
 
-![](file:///C:\Users\wyc\Desktop\MD文件夹\IPV4.png)
-             图一 套接字结构图！
+&lt;ul&gt;
+  &lt;li&gt;货币基金：让资金少的散户享受大额存单的高级待遇，收益自然就高&lt;/li&gt;
+  &lt;li&gt;债券
+    &lt;ul&gt;
+      &lt;li&gt;一张“合同”硬性规定，到期还本付息&lt;/li&gt;
+      &lt;li&gt;最重要的是评估利息，以及债券发行人的还款能力&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
 
-## 套接字传递方向
+&lt;h1 id=&quot;富有的人害怕&quot;&gt;富有的人害怕&lt;/h1&gt;
 
- |从进程空间到内核空间  | 从内核空间到进程空间
--------------------|-------------------
-函数 | bind 、connect 、sendto | accept 、 recvfrom 、 getsockname 、 getpeername
-图示| ![](file:///C:\Users\wyc\Desktop\MD文件夹\ProToKne.PNG)|![](file:///C:\Users\wyc\Desktop\MD文件夹\KneToPro.PNG)
+&lt;ol&gt;
+  &lt;li&gt;经济倒退&lt;/li&gt;
+  &lt;li&gt;文明崩溃&lt;/li&gt;
+  &lt;li&gt;战争&lt;/li&gt;
+&lt;/ol&gt;
 
-## 操作套接字结构的函数
+&lt;h1 id=&quot;投资问题&quot;&gt;投资问题&lt;/h1&gt;
 
-使用inet_addr函数（返回值为32位的网络字节序二进制值）易于出现的问题：
-1.所有的2^3个可能的二进制都是有效的IP地址（0.0.0.0到255.255.255.255），但是当出错时该函数返回INADDR_NONE常值（通常是一个32位均为1的值），这意味着点分十进制数（255.255.255.255）不能由该函数处理。因为其的二进制值被用于指示函数失败。
+&lt;ul&gt;
+  &lt;li&gt;什么时候买
+    &lt;ul&gt;
+      &lt;li&gt;差的股市行情
+        &lt;ul&gt;
+          &lt;li&gt;过去的一两年曾大幅度上涨&lt;/li&gt;
+          &lt;li&gt;指数和个股的PE，PB都非常高，股息率则非常低&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;中国内陆的A股
+        &lt;ul&gt;
+          &lt;li&gt;上海：15PE，2PB，超过要提防&lt;/li&gt;
+          &lt;li&gt;深圳：20PE，2.6PB，超过要提防&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;买什么
+    &lt;ul&gt;
+      &lt;li&gt;评价的标准
+        &lt;ul&gt;
+          &lt;li&gt;市盈率PE
+            &lt;ul&gt;
+              &lt;li&gt;市值除以净利润&lt;/li&gt;
+              &lt;li&gt;值越低越好&lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/li&gt;
+          &lt;li&gt;市净率PB
+            &lt;ul&gt;
+              &lt;li&gt;市值除以当前净资产&lt;/li&gt;
+              &lt;li&gt;一般是越高越好&lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/li&gt;
+          &lt;li&gt;股息率
+            &lt;ul&gt;
+              &lt;li&gt;年度分红金额除以股票价格&lt;/li&gt;
+              &lt;li&gt;分红&lt;/li&gt;
+              &lt;li&gt;以三年期限定金存利率作为判断标准，高于这个值算好，低于这个值较差&lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
 
-**改用inet_aton函数！**
+&lt;h1 id=&quot;为啥投资术语这么复杂&quot;&gt;为啥投资术语这么复杂&lt;/h1&gt;
 
-对结果进行静态存储导致该函数不可重入且非线程安全！！！！！！！！
+&lt;p&gt;&lt;strong&gt;本来概念很简单的东西，但是人类天生有把事物复杂化的倾向，这样可以竖起一道门槛，疑惑别人&lt;/strong&gt;&lt;/p&gt;
 
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;ssize_t Readn(int fd, void *vptr, size_t n)
-{
-    size_t nleft;
-    ssize_t nread;
-    char *ptr;&lt;/p&gt;
+&lt;h1 id=&quot;总结&quot;&gt;总结&lt;/h1&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ptr = vptr;
-nleft = n;
-while( nleft &amp;gt; 0 )
-{
-     if( ( nread = read(fd,ptr,nleft ) ) &amp;lt; 0 )
-     {
-          if( errno == EINTR )
-              nread = 0;
-          else
-              return -1;
-     }
-     else if( nread == 0 )
-          break;
-     
-     nleft -= nread;
-     ptr += nread;
-}
-return ( n - nleft ); } ```
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;套接字地址结构是每一个网络程序的重要组成部分，分配它们，填写它们，把指向它们的指针传递给各个套接字函数。&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;TCP套接字为应用进程提供一个字节流，它们没有记录标记，从TCP套接字read的返回值可能比我们请求的数量少，但是这不表示发生错误。对于文本行交互的应用来说，程序应该按照操作缓冲区而非按照操作文本行来编写。&lt;/strong&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;基本tcp套接字编程&quot;&gt;基本TCP套接字编程&lt;/h2&gt;
-
-&lt;p&gt;下图给出TCP客户端和服务段进程之间发生的一些典型事件的时间表！&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\套接字的时间表.PNG&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;注意：
-1.客户在调用connect前不必非得调用bind函数，因为如果需要的话，内核会确定源IP地址，big选择一个临时端口作为源端口。&lt;/p&gt;
-
-&lt;p&gt;2、按照&lt;strong&gt;TCP状态转换图（图2-4 原书中！）&lt;/strong&gt;，connect函数导致当前套接字从CLOSED状态（该套接字自从由socket函数创建以来一直所处的状态）转移到SYN_SENT状态，若成功再转移到ESTABLISHED状态，若connect失败则该套接字不再可用，必须关闭，我们不能对这样的套接字再次调用connect函数。&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;file:///C:\Users\wyc\Desktop\MD文件夹\bind.PNG&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;可以通过使用GetEnv函数获取环境变量，来改变程序运行轨迹！！！！！！！！&lt;/strong&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;并发服务器的编程框架&quot;&gt;并发服务器的编程框架&lt;/h2&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;pid_t pid
-int listenfd, connfd
-listenfd = socket();
-Bind(listenfd,...)
-for(;;)
-{
-	connfd = Accept(listenfd,...)
-    if( ( pid = for() ) == 0 )
-    {
-    	close(linsenfd);
-        doit(connfd);
-        close(connfd);
-    }
-    close(connfd);
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;集体的愚蠢是最没有成本的愚蠢，也是代价最高的愚蠢，要记住，当社会最后一个观望人也进入股市，家庭里最后一笔闲置资金也买成股票，哪里还有钱继续推动股票的继续上涨，剩下的可能只有一种暴跌&lt;/p&gt;
 
 </description>
-        <pubDate>Sat, 25 Jul 2015 20:26:00 +0800</pubDate>
-        <link>http://localhost:4000/2015/07/%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E7%AE%80%E4%BB%8B(%E7%AC%94%E8%AE%B0)/</link>
-        <guid isPermaLink="true">http://localhost:4000/2015/07/%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E7%AE%80%E4%BB%8B(%E7%AC%94%E8%AE%B0)/</guid>
+        <pubDate>Mon, 04 May 2020 20:17:00 +0800</pubDate>
+        <link>http://localhost:4000/2020/05/%E7%BB%99%E6%8A%95%E8%B5%84%E6%96%B0%E6%89%8B%E7%9A%84%E6%9E%81%E7%AE%80%E8%82%A1%E7%A5%A8%E8%AF%BE/</link>
+        <guid isPermaLink="true">http://localhost:4000/2020/05/%E7%BB%99%E6%8A%95%E8%B5%84%E6%96%B0%E6%89%8B%E7%9A%84%E6%9E%81%E7%AE%80%E8%82%A1%E7%A5%A8%E8%AF%BE/</guid>
         
-        <category>windows</category>
-        
-        
-      </item>
-    
-      <item>
-        <title>认识coff文件格式</title>
-        <description>&lt;p&gt;listi&lt;/p&gt;
-
-&lt;p&gt;[9:54 PM]&lt;/p&gt;
-
-&lt;h2 id=&quot;前言&quot;&gt;前言&lt;/h2&gt;
-&lt;p&gt;经常编译代码，运行代码，修改Bug,也会遇到各种问题，而且有时更多与编译、链接相关的问题，因此，就想了解一下最基本的编译、链接的原理。（平台为windows7和VS2010）&lt;/p&gt;
-
-&lt;h2 id=&quot;编译&quot;&gt;编译&lt;/h2&gt;
-&lt;p&gt;先了解编译出来的东东，而且使用的cmd编译命令，而不是IDE，因为使用IDE就无法知道中间过程了。先上码。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int printf( const char *format,...);
-
-int global_int_val = 84;
-int global_uninit_var;
-
-void func1(int i)
-{
-    printf(&quot;%d\n&quot;,i);
-}
-
-int main(void)
-{
-    static int static_var = 85;
-    static int static_var2;
-    int a = 1;
-    int b;
-    
-    func1( static_var + static_var2+ a + b );
-    
-    return a;
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;在VS控制台的命令，&lt;strong&gt;cl /c /Za SimpleSection.c&lt;/strong&gt;，产生的文件为&lt;strong&gt;SimpleSection.obj&lt;/strong&gt;，打开后就是一大堆二进制的数据。用 &lt;strong&gt;dumpbin&lt;/strong&gt;工具进行查看，命令&lt;strong&gt;dumpbin /ALL SimpleSection.obj &amp;gt; SimpleSection.txt&lt;/strong&gt;,产生的结果如下：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Microsoft (R) COFF/PE Dumper Version 10.00.30319.01
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
-
-Dump of file SimpleSection.obj
-
-File Type: COFF OBJECT
-
-FILE HEADER VALUES
-             14C machine (x86)
-               5 number of sections
-        55B240DA time date stamp Fri Jul 24 21:42:50 2015
-             1F0 file pointer to symbol table
-              14 number of symbols
-               0 size of optional header
-               0 characteristics
-
-SECTION HEADER #1
-.drectve name
-       0 physical address
-       0 virtual address
-      18 size of raw data
-      DC file pointer to raw data (000000DC to 000000F3)
-       0 file pointer to relocation table
-       0 file pointer to line numbers
-       0 number of relocations
-       0 number of line numbers
-  100A00 flags
-         Info
-         Remove
-         1 byte align
-
-RAW DATA #1
-  00000000: 20 20 20 2F 44 45 46 41 55 4C 54 4C 49 42 3A 22     /DEFAULTLIB:&quot;
-  00000010: 4C 49 42 43 4D 54 22 20                          LIBCMT&quot; 
-
-   Linker Directives
-   -----------------
-   /DEFAULTLIB:&quot;LIBCMT&quot;
-
-SECTION HEADER #2
-.debug$S name
-       0 physical address
-       0 virtual address
-      70 size of raw data
-      F4 file pointer to raw data (000000F4 to 00000163)
-       0 file pointer to relocation table
-       0 file pointer to line numbers
-       0 number of relocations
-       0 number of line numbers
-42100040 flags
-         Initialized Data
-         Discardable
-         1 byte align
-         Read Only
-
-RAW DATA #2
-  00000000: 04 00 00 00 F1 00 00 00 61 00 00 00 23 00 01 11  ....?...a...#...
-  00000010: 00 00 00 00 45 3A 5C 50 72 6F 67 72 61 6D 5C 53  ....E:\Program\S
-  00000020: 69 6D 70 6C 65 53 65 63 74 69 6F 6E 2E 6F 62 6A  impleSection.obj
-  00000030: 00 3A 00 3C 11 00 22 00 00 07 00 10 00 00 00 6F  .:.&amp;lt;..&quot;........o
-  00000040: 76 01 00 10 00 00 00 6F 76 01 00 4D 69 63 72 6F  v......ov..Micro
-  00000050: 73 6F 66 74 20 28 52 29 20 4F 70 74 69 6D 69 7A  soft (R) Optimiz
-  00000060: 69 6E 67 20 43 6F 6D 70 69 6C 65 72 00 00 00 00  ing Compiler....
-
-SECTION HEADER #3
-   .data name
-       0 physical address
-       0 virtual address
-       C size of raw data
-     164 file pointer to raw data (00000164 to 0000016F)
-       0 file pointer to relocation table
-       0 file pointer to line numbers
-       0 number of relocations
-       0 number of line numbers
-C0300040 flags
-         Initialized Data
-         4 byte align
-         Read Write
-
-RAW DATA #3
-  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
-
-SECTION HEADER #4
-   .text name
-       0 physical address
-       0 virtual address
-      4E size of raw data
-     170 file pointer to raw data (00000170 to 000001BD)
-     1BE file pointer to relocation table
-       0 file pointer to line numbers
-       5 number of relocations
-       0 number of line numbers
-60500020 flags
-         Code
-         16 byte align
-         Execute Read
-
-RAW DATA #4
-  00000000: 55 8B EC 8B 45 08 50 68 00 00 00 00 E8 00 00 00  U.ì.E.Ph....è...
-  00000010: 00 83 C4 08 5D C3 CC CC CC CC CC CC CC CC CC CC  ..?.]?ìììììììììì
-  00000020: 55 8B EC 83 EC 08 C7 45 FC 01 00 00 00 A1 00 00  U.ì.ì.?Eü....?..
-  00000030: 00 00 03 05 00 00 00 00 03 45 FC 03 45 F8 50 E8  .........Eü.E?Pè
-  00000040: 00 00 00 00 83 C4 04 8B 45 FC 8B E5 5D C3        .....?..Eü.?]?
-
-RELOCATIONS #4
-                                                Symbol    Symbol
- Offset    Type              Applied To         Index     Name
- --------  ----------------  -----------------  --------  ------
- 00000008  DIR32                      00000000         A  $SG893
- 0000000D  REL32                      00000000         F  _printf
- 0000002E  DIR32                      00000000         B  ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
- 00000034  DIR32                      00000000        13  ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
- 00000040  REL32                      00000000         E  _func1
-
-SECTION HEADER #5
-    .bss name
-       0 physical address
-       0 virtual address
-       4 size of raw data
-       0 file pointer to raw data
-       0 file pointer to relocation table
-       0 file pointer to line numbers
-       0 number of relocations
-       0 number of line numbers
-C0300080 flags
-         Uninitialized Data
-         4 byte align
-         Read Write
-
-COFF SYMBOL TABLE
-000 00AA766F ABS    notype       Static       | @comp.id
-001 00000001 ABS    notype       Static       | @feat.00
-002 00000000 SECT1  notype       Static       | .drectve
-    Section length   18, #relocs    0, #linenums    0, checksum        0
-004 00000000 SECT2  notype       Static       | .debug$S
-    Section length   70, #relocs    0, #linenums    0, checksum        0
-006 00000004 UNDEF  notype       External     | _global_uninit_var
-007 00000000 SECT3  notype       Static       | .data
-    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
-009 00000000 SECT3  notype       External     | _global_int_val
-00A 00000004 SECT3  notype       Static       | $SG893
-00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
-00C 00000000 SECT4  notype       Static       | .text
-    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
-00E 00000000 SECT4  notype ()    External     | _func1
-00F 00000000 UNDEF  notype ()    External     | _printf
-010 00000020 SECT4  notype ()    External     | _main
-011 00000000 SECT5  notype       Static       | .bss
-    Section length    4, #relocs    0, #linenums    0, checksum        0
-013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
-
-String Table Size = 0x5C bytes
-
-  Summary
-
-           4 .bss
-           C .data
-          70 .debug$S
-          18 .drectve
-          4E .text
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h2 id=&quot;coff的文件格式&quot;&gt;COFF的文件格式&lt;/h2&gt;
-
-&lt;p&gt;其实从上面的结果比较让人不解，所以需要了解一下COFF文件的格式，这样的话，在回头看的时候，就比较非常容易的理解了。&lt;/p&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th&gt;Image Header  IMAGE_FILE_HEADER&lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td&gt;Section Tabel IMAGE_SECTION_HEADER[]&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;.text&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;.data&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;.drectve&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;.debug$S&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;…&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td&gt;Symbol Table&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;把上面的结果进行分割，以便更好的理解，COFF格式！&lt;/p&gt;
-
-&lt;h3 id=&quot;image-header&quot;&gt;Image Header&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;File Type: COFF OBJECT    ---&amp;gt; 文件类型
-
-FILE HEADER VALUES
-             14C machine (x86) --&amp;gt; 目标机器类型 微软定义14C表示X86
-               5 number of sections --&amp;gt; 段的数量
-        55B240DA time date stamp Fri Jul 24 21:42:50 2015 --&amp;gt;创建时间
-             1F0 file pointer to symbol table --&amp;gt;符号表在PE中的位置
-              14 number of symbols ---&amp;gt;符号数量
-               0 size of optional header ----&amp;gt; OptionalHeader的大小，不存在为0
-               0 characteristics
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h3 id=&quot;section-tabe&quot;&gt;Section Tabe&lt;/h3&gt;
-
-&lt;p&gt;COFF文件的段表，它是一个类型为“IMAGE_SECTION_HEADER”结构的数组，数组里面每一个元素代表一个段。这个数组的元素与该文件包含的段的数量是一致。可以查看一下IMAGE_SECTION_HEADER，就可以与下面的内容对应上了。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;SECTION HEADER #3
-   .data name
-       0 physical address
-       0 virtual address
-       C size of raw data
-     164 file pointer to raw data (00000164 to 0000016F)
-       0 file pointer to relocation table
-       0 file pointer to line numbers
-       0 number of relocations
-       0 number of line numbers
-C0300040 flags
-         Initialized Data
-         4 byte align
-         Read Write
-
-RAW DATA #3
-  00000000: 54 00 00 00 25 64 0A 00 55 00 00 00              T...%d..U...
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h3 id=&quot;symboltable&quot;&gt;Symboltable&lt;/h3&gt;
-
-&lt;p&gt;最后的面的是COFF符号表&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;COFF SYMBOL TABLE
-000 00AA766F ABS    notype       Static       | @comp.id
-001 00000001 ABS    notype       Static       | @feat.00
-002 00000000 SECT1  notype       Static       | .drectve
-    Section length   18, #relocs    0, #linenums    0, checksum        0
-004 00000000 SECT2  notype       Static       | .debug$S
-    Section length   70, #relocs    0, #linenums    0, checksum        0
-006 00000004 UNDEF  notype       External     | _global_uninit_var
-007 00000000 SECT3  notype       Static       | .data
-    Section length    C, #relocs    0, #linenums    0, checksum AC5AB941
-009 00000000 SECT3  notype       External     | _global_int_val
-00A 00000004 SECT3  notype       Static       | $SG893
-00B 00000008 SECT3  notype       Static       | ?static_var@?1??main@@9@9 (`main'::`2'::static_var)
-00C 00000000 SECT4  notype       Static       | .text
-    Section length   4E, #relocs    5, #linenums    0, checksum CC61DB94
-00E 00000000 SECT4  notype ()    External     | _func1
-00F 00000000 UNDEF  notype ()    External     | _printf
-010 00000020 SECT4  notype ()    External     | _main
-011 00000000 SECT5  notype       Static       | .bss
-    Section length    4, #relocs    0, #linenums    0, checksum        0
-013 00000000 SECT5  notype       Static       | ?static_var2@?1??main@@9@9 (`main'::`2'::static_var2)
-
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-&lt;p&gt;第一列为符号的编号，即符号在符号表中的下表。&lt;/p&gt;
-
-&lt;p&gt;第二列为符号的大小，即符号所表示的对象所占用的空间。&lt;/p&gt;
-
-&lt;p&gt;第三列为符号所在的位置，ABS表示不存在任何一段中，SECT1表示在本文件第一段中。UNDEF表示未定义的。&lt;/p&gt;
-
-&lt;p&gt;第四列为符号的类型，notype为变量，notype()表示函数，只有两种类型。&lt;/p&gt;
-
-&lt;p&gt;第五列为符号的可见范围，static为局部变量，External为全局变量。&lt;/p&gt;
-
-&lt;p&gt;第六列为符号的符号名。&lt;/p&gt;
-</description>
-        <pubDate>Fri, 24 Jul 2015 21:54:00 +0800</pubDate>
-        <link>http://localhost:4000/2015/07/%E8%AE%A4%E8%AF%86Coff%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/</link>
-        <guid isPermaLink="true">http://localhost:4000/2015/07/%E8%AE%A4%E8%AF%86Coff%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F/</guid>
-        
-        <category>windows</category>
+        <category>经济</category>
         
         
       </item>
