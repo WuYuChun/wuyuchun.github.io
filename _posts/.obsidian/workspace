@@ -6,7 +6,8 @@
       {
         "id": "9db9ab4f7343c308",
         "type": "leaf",
-        "dimension": 28.061224489795915,
+        "dimension": 57.12918660287082,
+        "active": true,
         "state": {
           "type": "markdown",
           "state": {
@@ -19,13 +20,12 @@
       {
         "id": "db2a434be14b8a5f",
         "type": "split",
-        "dimension": 71.93877551020408,
+        "dimension": 42.87081339712919,
         "children": [
           {
             "id": "735b3da08e435c42",
             "type": "leaf",
             "dimension": 72.43589743589743,
-            "active": true,
             "state": {
               "type": "localgraph",
               "state": {
@@ -62,7 +62,7 @@
           {
             "id": "7b0998e794f44f2f",
             "type": "leaf",
-            "dimension": 27.564102564102566,
+            "dimension": 27.564102564102562,
             "state": {
               "type": "backlink",
               "state": {
@@ -117,7 +117,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 319
   },
   "right": {
     "id": "5de18a77e2dea9aa",
@@ -151,6 +151,7 @@
   },
   "lastOpenFiles": [
     "2021-03-23-暗知识，机器认知如何颠覆商业和社会.md",
+    "2020-06-01自动驾驶的算力(Tops)谎言.md",
     "2021-03-23-构建优雅的知识创造系统.md",
     "2021-03-23-人类的未来.md"
   ]
