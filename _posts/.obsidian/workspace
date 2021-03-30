@@ -6,11 +6,12 @@
       {
         "id": "9db9ab4f7343c308",
         "type": "leaf",
-        "dimension": 56.7847882454624,
+        "dimension": 56.78478824546241,
+        "active": true,
         "state": {
           "type": "markdown",
           "state": {
-            "file": "2021-03-29-未来世界的幸存者.md",
+            "file": "2015-06-08-C++之运行时识别类型.md",
             "mode": "source"
           }
         },
@@ -19,7 +20,7 @@
       {
         "id": "db2a434be14b8a5f",
         "type": "split",
-        "dimension": 43.2152117545376,
+        "dimension": 43.21521175453759,
         "children": [
           {
             "id": "735b3da08e435c42",
@@ -28,7 +29,7 @@
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "2021-03-29-未来世界的幸存者.md",
+                "file": "2015-06-08-C++之运行时识别类型.md",
                 "options": {
                   "collapse-filter": true,
                   "search": "",
@@ -62,11 +63,10 @@
             "id": "7b0998e794f44f2f",
             "type": "leaf",
             "dimension": 46.66666666666666,
-            "active": true,
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-03-29-未来世界的幸存者.md",
+                "file": "2015-06-08-C++之运行时识别类型.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -133,7 +133,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-03-29-未来世界的幸存者.md",
+                "file": "2015-06-08-C++之运行时识别类型.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -150,10 +150,12 @@
     "collapsed": true
   },
   "lastOpenFiles": [
+    "2015-06-08-C++之运行时识别类型.md",
+    "2021-03-30-c++语言知识.md",
+    "2021-03-23-计算机理论知识.md",
     "2021-03-29-未来世界的幸存者.md",
     "2021-03-23-人类的未来.md",
     "2021-03-27-大话设计模式.md",
-    "2021-03-23-计算机理论知识.md",
     "2021-03-23-暗知识，机器认知如何颠覆商业和社会.md",
     "2020-06-01自动驾驶的算力(Tops)谎言.md",
     "2021-03-23-构建优雅的知识创造系统.md"
