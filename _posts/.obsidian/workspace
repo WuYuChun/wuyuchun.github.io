@@ -7,10 +7,11 @@
         "id": "9db9ab4f7343c308",
         "type": "leaf",
         "dimension": 56.78478824546241,
+        "active": true,
         "state": {
           "type": "markdown",
           "state": {
-            "file": "2021-04-06-ARM优化.md",
+            "file": "2021-03-23-计算机理论知识.md",
             "mode": "source"
           }
         },
@@ -25,11 +26,10 @@
             "id": "735b3da08e435c42",
             "type": "leaf",
             "dimension": 53.33333333333334,
-            "active": true,
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "2021-04-06-ARM优化.md",
+                "file": "2021-03-23-计算机理论知识.md",
                 "options": {
                   "collapse-filter": true,
                   "search": "",
@@ -66,7 +66,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-04-06-ARM优化.md",
+                "file": "2021-03-23-计算机理论知识.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -133,7 +133,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-04-06-ARM优化.md",
+                "file": "2021-03-23-计算机理论知识.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -150,15 +150,15 @@
     "collapsed": true
   },
   "lastOpenFiles": [
-    "2021-04-06-ARM优化.md",
     "2021-03-23-计算机理论知识.md",
-    "2015-06-08-C++之运行时识别类型.md",
-    "2021-03-30-c++语言知识.md",
-    "2021-03-29-未来世界的幸存者.md",
-    "2021-03-23-人类的未来.md",
+    "2020-09-23-软件小设计.md",
+    "2020-11-06-程序员必读之软件架构.md",
+    "2020-09-22-软件开发本质论.md",
+    "2020-12-14-团队协作的五大障碍.md",
+    "2021-03-23-linux调度算法BFS.md",
+    "2021-03-21-人生管理.md",
     "2021-03-27-大话设计模式.md",
-    "2021-03-23-暗知识，机器认知如何颠覆商业和社会.md",
-    "2020-06-01自动驾驶的算力(Tops)谎言.md",
-    "2021-03-23-构建优雅的知识创造系统.md"
+    "2021-03-30-关于多线程的简要介绍.md",
+    "2021-03-30-c++语言知识.md"
   ]
 }
