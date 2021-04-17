@@ -7,11 +7,10 @@
         "id": "9db9ab4f7343c308",
         "type": "leaf",
         "dimension": 56.78478824546241,
-        "active": true,
         "state": {
           "type": "markdown",
           "state": {
-            "file": "2021-03-23-计算机理论知识.md",
+            "file": "2021-04-16-设计模式概述.md",
             "mode": "source"
           }
         },
@@ -29,10 +28,10 @@
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "2021-03-23-计算机理论知识.md",
+                "file": "2021-04-16-设计模式概述.md",
                 "options": {
-                  "collapse-filter": true,
-                  "search": "",
+                  "collapse-filter": false,
+                  "search": "设计模式",
                   "localJumps": 1,
                   "localBacklinks": true,
                   "localForelinks": true,
@@ -53,7 +52,7 @@
                   "linkStrength": 1,
                   "linkDistance": 250,
                   "scale": 0.6554983534946917,
-                  "close": false
+                  "close": true
                 }
               }
             },
@@ -66,10 +65,12 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-03-23-计算机理论知识.md",
+                "file": "2021-04-16-设计模式概述.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
                 "backlinkCollapsed": false,
                 "unlinkedCollapsed": false
               }
@@ -133,10 +134,12 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-03-23-计算机理论知识.md",
+                "file": "2021-04-16-设计模式概述.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
                 "backlinkCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -149,16 +152,17 @@
     "width": 300,
     "collapsed": true
   },
+  "active": "9db9ab4f7343c308",
   "lastOpenFiles": [
+    "2021-04-16-设计模式概述.md",
     "2021-03-23-计算机理论知识.md",
+    "2021-04-16-编程语言.md",
     "2020-09-23-软件小设计.md",
     "2020-11-06-程序员必读之软件架构.md",
     "2020-09-22-软件开发本质论.md",
     "2020-12-14-团队协作的五大障碍.md",
     "2021-03-23-linux调度算法BFS.md",
     "2021-03-21-人生管理.md",
-    "2021-03-27-大话设计模式.md",
-    "2021-03-30-关于多线程的简要介绍.md",
-    "2021-03-30-c++语言知识.md"
+    "2021-03-27-大话设计模式.md"
   ]
 }
