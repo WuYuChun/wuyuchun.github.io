@@ -6,79 +6,52 @@
       {
         "id": "9db9ab4f7343c308",
         "type": "leaf",
-        "dimension": 56.78478824546241,
+        "dimension": 53.25644504748982,
         "state": {
           "type": "markdown",
           "state": {
-            "file": "2021-04-16-设计模式概述.md",
+            "file": "2021-04-19-tmux使用命令.md",
             "mode": "source"
           }
         },
         "group": "abd4c1bf6c783a41"
       },
       {
-        "id": "db2a434be14b8a5f",
-        "type": "split",
-        "dimension": 43.21521175453759,
-        "children": [
-          {
-            "id": "735b3da08e435c42",
-            "type": "leaf",
-            "dimension": 53.33333333333334,
-            "state": {
-              "type": "localgraph",
-              "state": {
-                "file": "2021-04-16-设计模式概述.md",
-                "options": {
-                  "collapse-filter": false,
-                  "search": "设计模式",
-                  "localJumps": 1,
-                  "localBacklinks": true,
-                  "localForelinks": true,
-                  "localInterlinks": false,
-                  "showTags": false,
-                  "showAttachments": false,
-                  "hideUnresolved": false,
-                  "collapse-color-groups": true,
-                  "colorGroups": [],
-                  "collapse-display": true,
-                  "showArrow": false,
-                  "textFadeMultiplier": 0,
-                  "nodeSizeMultiplier": 1,
-                  "lineSizeMultiplier": 1,
-                  "collapse-forces": true,
-                  "centerStrength": 0.518713248970312,
-                  "repelStrength": 10,
-                  "linkStrength": 1,
-                  "linkDistance": 250,
-                  "scale": 0.6554983534946917,
-                  "close": true
-                }
-              }
-            },
-            "group": "abd4c1bf6c783a41"
-          },
-          {
-            "id": "7b0998e794f44f2f",
-            "type": "leaf",
-            "dimension": 46.66666666666666,
-            "state": {
-              "type": "backlink",
-              "state": {
-                "file": "2021-04-16-设计模式概述.md",
-                "collapseAll": false,
-                "extraContext": false,
-                "sortOrder": "alphabetical",
-                "showSearch": false,
-                "searchQuery": "",
-                "backlinkCollapsed": false,
-                "unlinkedCollapsed": false
-              }
-            },
-            "group": "abd4c1bf6c783a41"
+        "id": "7e004ed53758a1b8",
+        "type": "leaf",
+        "dimension": 46.74355495251017,
+        "state": {
+          "type": "localgraph",
+          "state": {
+            "file": "2021-04-19-tmux使用命令.md",
+            "options": {
+              "collapse-filter": true,
+              "search": "",
+              "localJumps": 1,
+              "localBacklinks": true,
+              "localForelinks": true,
+              "localInterlinks": false,
+              "showTags": false,
+              "showAttachments": false,
+              "hideUnresolved": false,
+              "collapse-color-groups": true,
+              "colorGroups": [],
+              "collapse-display": true,
+              "showArrow": false,
+              "textFadeMultiplier": 0,
+              "nodeSizeMultiplier": 1,
+              "lineSizeMultiplier": 1,
+              "collapse-forces": true,
+              "centerStrength": 0.518713248970312,
+              "repelStrength": 10,
+              "linkStrength": 1,
+              "linkDistance": 250,
+              "scale": 1,
+              "close": false
+            }
           }
-        ],
-        "direction": "horizontal"
+        },
+        "group": "abd4c1bf6c783a41"
       }
     ],
     "direction": "vertical"
@@ -134,7 +107,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-04-16-设计模式概述.md",
+                "file": "2021-04-19-tmux使用命令.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -152,17 +125,17 @@
     "width": 300,
     "collapsed": true
   },
-  "active": "9db9ab4f7343c308",
+  "active": "7e004ed53758a1b8",
   "lastOpenFiles": [
-    "2021-04-16-设计模式概述.md",
+    "2021-04-19-tmux使用命令.md",
+    "2021-04-20-linux 工具.md",
     "2021-03-23-计算机理论知识.md",
+    "2015-03-24-关于C++思考（一）.md",
+    "Untitled.md",
+    "2021-04-16-设计模式概述.md",
     "2021-04-16-编程语言.md",
     "2020-09-23-软件小设计.md",
     "2020-11-06-程序员必读之软件架构.md",
-    "2020-09-22-软件开发本质论.md",
-    "2020-12-14-团队协作的五大障碍.md",
-    "2021-03-23-linux调度算法BFS.md",
-    "2021-03-21-人生管理.md",
-    "2021-03-27-大话设计模式.md"
+    "2020-09-22-软件开发本质论.md"
   ]
 }
