@@ -75,5 +75,7 @@ Spark MLlib提供三种模式挖掘算法：
 
 **使用Gephi可视化**
 
-GEXF文件格式
+GEXF文件格式：可交换XML图格式，https://gephi.org/gexf/format
+
+但如同任何事情一样，便利性的增加通常意味着性能的妥协。
 
