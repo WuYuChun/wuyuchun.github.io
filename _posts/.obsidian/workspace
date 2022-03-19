@@ -6,11 +6,12 @@
       {
         "id": "9db9ab4f7343c308",
         "type": "leaf",
-        "dimension": 53.25644504748982,
+        "dimension": 82.69896193771626,
+        "active": true,
         "state": {
           "type": "markdown",
           "state": {
-            "file": "2021-04-19-tmux使用命令.md",
+            "file": "2022-03-19-图解性能优化.md",
             "mode": "source"
           }
         },
@@ -19,11 +20,11 @@
       {
         "id": "7e004ed53758a1b8",
         "type": "leaf",
-        "dimension": 46.74355495251017,
+        "dimension": 17.301038062283737,
         "state": {
           "type": "localgraph",
           "state": {
-            "file": "2021-04-19-tmux使用命令.md",
+            "file": "2022-03-19-图解性能优化.md",
             "options": {
               "collapse-filter": true,
               "search": "",
@@ -107,12 +108,10 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2021-04-19-tmux使用命令.md",
+                "file": "2022-03-19-图解性能优化.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
-                "showSearch": false,
-                "searchQuery": "",
                 "backlinkCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,8 +124,9 @@
     "width": 300,
     "collapsed": true
   },
-  "active": "7e004ed53758a1b8",
   "lastOpenFiles": [
+    "2022-03-19-图解性能优化.md",
+    "2022-03-19-数据之美-学会可视化设计.md",
     "2021-04-19-tmux使用命令.md",
     "2021-04-20-linux 工具.md",
     "2021-03-23-计算机理论知识.md",
@@ -134,8 +134,6 @@
     "Untitled.md",
     "2021-04-16-设计模式概述.md",
     "2021-04-16-编程语言.md",
-    "2020-09-23-软件小设计.md",
-    "2020-11-06-程序员必读之软件架构.md",
-    "2020-09-22-软件开发本质论.md"
+    "2020-09-23-软件小设计.md"
   ]
 }
