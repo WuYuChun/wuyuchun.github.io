@@ -4,27 +4,12 @@
     "type": "split",
     "children": [
       {
-        "id": "9db9ab4f7343c308",
-        "type": "leaf",
-        "dimension": 82.69896193771626,
-        "active": true,
-        "state": {
-          "type": "markdown",
-          "state": {
-            "file": "2022-03-19-图解性能优化.md",
-            "mode": "source"
-          }
-        },
-        "group": "abd4c1bf6c783a41"
-      },
-      {
         "id": "7e004ed53758a1b8",
         "type": "leaf",
-        "dimension": 17.301038062283737,
         "state": {
           "type": "localgraph",
           "state": {
-            "file": "2022-03-19-图解性能优化.md",
+            "file": "2021-03-23-计算机理论知识.md",
             "options": {
               "collapse-filter": true,
               "search": "",
@@ -47,12 +32,23 @@
               "repelStrength": 10,
               "linkStrength": 1,
               "linkDistance": 250,
-              "scale": 1,
+              "scale": 1.5255568449083825,
               "close": false
             }
           }
-        },
-        "group": "abd4c1bf6c783a41"
+        }
+      },
+      {
+        "id": "8634208908f5be40",
+        "type": "leaf",
+        "state": {
+          "type": "markdown",
+          "state": {
+            "file": "2021-03-23-计算机理论知识.md",
+            "mode": "source",
+            "source": false
+          }
+        }
       }
     ],
     "direction": "vertical"
@@ -92,7 +88,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 319
+    "width": 335
   },
   "right": {
     "id": "5de18a77e2dea9aa",
@@ -108,10 +104,12 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "2022-03-19-图解性能优化.md",
+                "file": "2021-03-23-计算机理论知识.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
                 "backlinkCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -124,16 +122,17 @@
     "width": 300,
     "collapsed": true
   },
+  "active": "7e004ed53758a1b8",
   "lastOpenFiles": [
-    "2022-03-19-图解性能优化.md",
-    "2022-03-19-数据之美-学会可视化设计.md",
-    "2021-04-19-tmux使用命令.md",
-    "2021-04-20-linux 工具.md",
     "2021-03-23-计算机理论知识.md",
-    "2015-03-24-关于C++思考（一）.md",
-    "Untitled.md",
-    "2021-04-16-设计模式概述.md",
-    "2021-04-16-编程语言.md",
-    "2020-09-23-软件小设计.md"
+    "2022-03-20-并行计算.md",
+    "2020-07-28-专业的CUDA®C编程.md",
+    "2020-07-16-GPU性能建模和优化.md",
+    "2020-05-09-cuda的编译.md",
+    "2020-05-09-cuda的最佳实践.md",
+    "2020-07-25-CudaDMA：通过Warp专业化优化GPU内存带宽.md",
+    "[2020-05-16-profiler_cuda.md",
+    "images/posts/2020-05-09-08-31-34-APOD.png.md",
+    "2020-05-16-profiler_cuda.md"
   ]
 }
